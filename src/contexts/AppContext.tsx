@@ -1,0 +1,314 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  UserProfile,
+  ConversationHistory,
+  ProgressData,
+  CoachingStyle,
+  ConnectedApp,
+  Message,
+  DataSource,
+  Priority,
+  PastAttempt,
+  Barrier,
+  PointsTransaction,
+  SharingPreferences,
+} from '@/types';
+import {
+  getUserProfile,
+  createDefaultProfile,
+  saveUserProfile,
+  getConversationHistory,
+  saveConversationHistory,
+  getProgressData,
+  saveProgressData,
+  addMessage as addMessageToStorage,
+  recordCheckIn as recordCheckInStorage,
+  addHealthArea as addHealthAreaStorage,
+  removeHealthArea as removeHealthAreaStorage,
+  addProgressEntry as addProgressEntryStorage,
+  addMilestone as addMilestoneStorage,
+  resetAllData,
+  setDataSources as setDataSourcesStorage,
+  setPriorities as setPrioritiesStorage,
+  setPastAttempt as setPastAttemptStorage,
+  setBarriers as setBarriersStorage,
+  addPoints as addPointsStorage,
+  setSharingPreference as setSharingPreferenceStorage,
+} from '@/lib/storage';
+import {
+  calculateHealthScore,
+  calculateReputationPoints,
+  calculateReputationLevel,
+  POINTS_CONFIG,
+  calculateStreakBonus,
+} from '@/lib/scores';
+
+interface AppContextType {
+  // User Profile
+  profile: UserProfile | null;
+  isLoading: boolean;
+  setName: (name: string) => void;
+  setCoachingStyle: (style: CoachingStyle) => void;
+  setConnectedApps: (apps: ConnectedApp[]) => void;
+  completeOnboarding: () => void;
+  addHealthArea: (areaId: string, areaName: string) => void;
+  removeHealthArea: (areaId: string) => void;
+  recordCheckIn: () => void;
+
+  // New onboarding data
+  setDataSources: (sources: DataSource[]) => void;
+  setPriorities: (priorities: Priority[]) => void;
+  setPastAttempt: (attempt: PastAttempt) => void;
+  setBarriers: (barriers: Barrier[]) => void;
+
+  // Points system
+  addPoints: (type: PointsTransaction['type'], amount: number, description: string) => void;
+
+  // Sharing preferences
+  setSharingPreference: (key: keyof SharingPreferences, value: boolean) => void;
+
+  // Scores
+  recalculateScores: () => void;
+
+  // Conversations
+  conversations: ConversationHistory;
+  addMessage: (role: 'assistant' | 'user', content: string, quickActions?: { label: string; value: string }[]) => Message;
+
+  // Progress
+  progress: ProgressData;
+  addProgressEntry: (entry: { type: 'photo' | 'milestone' | 'note'; category: 'body' | 'skin' | 'general'; content: string; note?: string }) => void;
+  addMilestone: (content: string) => void;
+
+  // Reset
+  resetAll: () => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [conversations, setConversations] = useState<ConversationHistory>({ conversations: [] });
+  const [progress, setProgress] = useState<ProgressData>({ entries: [] });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load data on mount
+  useEffect(() => {
+    const loadData = () => {
+      const storedProfile = getUserProfile();
+      const storedConversations = getConversationHistory();
+      const storedProgress = getProgressData();
+
+      if (storedProfile) {
+        setProfile(storedProfile);
+      } else {
+        const newProfile = createDefaultProfile();
+        saveUserProfile(newProfile);
+        setProfile(newProfile);
+      }
+
+      setConversations(storedConversations);
+      setProgress(storedProgress);
+      setIsLoading(false);
+    };
+
+    loadData();
+  }, []);
+
+  const setName = useCallback((name: string) => {
+    setProfile(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, name };
+      saveUserProfile(updated);
+      return updated;
+    });
+  }, []);
+
+  const setCoachingStyle = useCallback((coachingStyle: CoachingStyle) => {
+    setProfile(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, coachingStyle };
+      saveUserProfile(updated);
+      return updated;
+    });
+  }, []);
+
+  const setConnectedApps = useCallback((connectedApps: ConnectedApp[]) => {
+    setProfile(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, connectedApps };
+      saveUserProfile(updated);
+      return updated;
+    });
+  }, []);
+
+  const completeOnboarding = useCallback(() => {
+    setProfile(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, onboardingCompleted: true };
+      saveUserProfile(updated);
+      return updated;
+    });
+    // Add a milestone for starting the journey
+    addMilestoneStorage('Started health journey with yeww');
+    setProgress(getProgressData());
+  }, []);
+
+  const addHealthArea = useCallback((areaId: string, areaName: string) => {
+    addHealthAreaStorage(areaId, areaName);
+    setProfile(getUserProfile());
+    addMilestoneStorage(`Started tracking ${areaName}`);
+    setProgress(getProgressData());
+  }, []);
+
+  const removeHealthArea = useCallback((areaId: string) => {
+    removeHealthAreaStorage(areaId);
+    setProfile(getUserProfile());
+  }, []);
+
+  const recordCheckIn = useCallback(() => {
+    recordCheckInStorage();
+    const updatedProfile = getUserProfile();
+    setProfile(updatedProfile);
+
+    // Award points for check-in
+    if (updatedProfile) {
+      addPointsStorage('check-in', POINTS_CONFIG.CHECK_IN, 'Daily check-in');
+
+      // Award streak bonus after day 3
+      const streakBonus = calculateStreakBonus(updatedProfile.checkInStreak);
+      if (streakBonus > 0) {
+        addPointsStorage('streak-bonus', streakBonus, `${updatedProfile.checkInStreak} day streak bonus`);
+      }
+
+      // Refresh profile with new points
+      setProfile(getUserProfile());
+    }
+  }, []);
+
+  // New onboarding data methods
+  const setDataSources = useCallback((sources: DataSource[]) => {
+    setDataSourcesStorage(sources);
+    setProfile(getUserProfile());
+  }, []);
+
+  const setPriorities = useCallback((priorities: Priority[]) => {
+    setPrioritiesStorage(priorities);
+    setProfile(getUserProfile());
+  }, []);
+
+  const setPastAttempt = useCallback((attempt: PastAttempt) => {
+    setPastAttemptStorage(attempt);
+    setProfile(getUserProfile());
+  }, []);
+
+  const setBarriers = useCallback((barriers: Barrier[]) => {
+    setBarriersStorage(barriers);
+    setProfile(getUserProfile());
+  }, []);
+
+  // Points system
+  const addPoints = useCallback((type: PointsTransaction['type'], amount: number, description: string) => {
+    addPointsStorage(type, amount, description);
+    setProfile(getUserProfile());
+  }, []);
+
+  // Sharing preferences
+  const setSharingPreference = useCallback((key: keyof SharingPreferences, value: boolean) => {
+    setSharingPreferenceStorage(key, value);
+    setProfile(getUserProfile());
+  }, []);
+
+  // Recalculate scores
+  const recalculateScores = useCallback(() => {
+    setProfile(prev => {
+      if (!prev) return prev;
+
+      const healthScore = calculateHealthScore(prev);
+      const reputationPoints = calculateReputationPoints(prev);
+      const reputationLevel = calculateReputationLevel(reputationPoints);
+
+      const updated = {
+        ...prev,
+        healthScore,
+        reputationPoints,
+        reputationLevel,
+      };
+
+      saveUserProfile(updated);
+      return updated;
+    });
+  }, []);
+
+  const addMessage = useCallback((role: 'assistant' | 'user', content: string, quickActions?: { label: string; value: string }[]) => {
+    const message = addMessageToStorage(role, content, quickActions);
+    setConversations(getConversationHistory());
+    return message;
+  }, []);
+
+  const addProgressEntry = useCallback((entry: { type: 'photo' | 'milestone' | 'note'; category: 'body' | 'skin' | 'general'; content: string; note?: string }) => {
+    addProgressEntryStorage(entry);
+    setProgress(getProgressData());
+  }, []);
+
+  const addMilestone = useCallback((content: string) => {
+    addMilestoneStorage(content);
+    setProgress(getProgressData());
+  }, []);
+
+  const resetAll = useCallback(() => {
+    resetAllData();
+    const newProfile = createDefaultProfile();
+    saveUserProfile(newProfile);
+    setProfile(newProfile);
+    setConversations({ conversations: [] });
+    setProgress({ entries: [] });
+  }, []);
+
+  return (
+    <AppContext.Provider
+      value={{
+        profile,
+        isLoading,
+        setName,
+        setCoachingStyle,
+        setConnectedApps,
+        completeOnboarding,
+        addHealthArea,
+        removeHealthArea,
+        recordCheckIn,
+        // New onboarding data
+        setDataSources,
+        setPriorities,
+        setPastAttempt,
+        setBarriers,
+        // Points system
+        addPoints,
+        // Sharing preferences
+        setSharingPreference,
+        // Scores
+        recalculateScores,
+        // Conversations
+        conversations,
+        addMessage,
+        // Progress
+        progress,
+        addProgressEntry,
+        addMilestone,
+        // Reset
+        resetAll,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+}
+
+export function useApp() {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+}
