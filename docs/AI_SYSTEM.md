@@ -8,16 +8,24 @@ This document describes how the AI assistant works, including the prompting stra
 
 yeww uses **Claude (claude-sonnet-4)** via the Anthropic API as its AI backbone. The key differentiator is that Claude has access to the user's complete health profile, enabling personalized conversations that no generic chatbot can provide.
 
+The system uses a **modular prompt architecture** with XML-structured sections, inspired by professional conversation design and health AI best practices.
+
 ```mermaid
 flowchart LR
     subgraph Input
         UM[User Message]
         UP[User Profile]
         CH[Chat History]
+        SC[Session Context]
+    end
+
+    subgraph "Prompt Builder"
+        PB[promptBuilder.ts]
+        PS[Prompt Sections]
     end
 
     subgraph Processing
-        SP[System Prompt Builder]
+        SP[System Prompt]
         API[Claude API]
     end
 
@@ -26,10 +34,61 @@ flowchart LR
     end
 
     UM --> API
-    UP --> SP
+    UP --> PB
+    SC --> PB
+    PB --> PS
+    PS --> SP
     SP --> API
     CH --> API
     API --> R
+```
+
+---
+
+## Architecture
+
+### File Structure
+
+```
+src/
+├── app/api/chat/
+│   └── route.ts              # API endpoint, uses promptBuilder
+├── lib/
+│   ├── promptBuilder.ts      # Main prompt construction
+│   └── promptSections/       # Modular prompt sections
+│       ├── index.ts          # Barrel export
+│       ├── identity.ts       # Who yeww is
+│       ├── healthKnowledge.ts # Health metric interpretation
+│       ├── conversation.ts   # Conversation design patterns
+│       ├── voice.ts          # Language and tone
+│       ├── safety.ts         # Medical boundaries, crisis
+│       ├── patterns.ts       # Pattern surfacing guidelines
+│       ├── formatting.ts     # Response formatting
+│       └── examples.ts       # Few-shot examples
+└── types/
+    └── index.ts              # PromptContext, SessionContext types
+```
+
+### System Prompt Structure (~5,000 tokens)
+
+The prompt uses XML tags for clear organization:
+
+```xml
+<system>
+  <identity>           Who yeww is and isn't
+  <core_mission>       Three value propositions
+  <user_context>       Enhanced profile with interpretations
+  <health_knowledge>   How to interpret HRV, sleep, recovery
+  <current_health_data> Dynamic metrics if available
+  <conversation_design> Three-step rhythm, sentiment awareness
+  <session_context>    Time of day, conversation turn
+  <voice_personality>  Language patterns, do's/don'ts
+  <safety_boundaries>  Medical limits, crisis detection
+  <pattern_surfacing>  When/how to share insights
+  <detected_patterns>  Active patterns if available
+  <formatting>         Response structure
+  <examples>           Few-shot demonstrations
+</system>
 ```
 
 ---
@@ -42,7 +101,7 @@ flowchart LR
 
 ```typescript
 interface ChatRequest {
-  messages: Message[];         // Conversation history
+  messages: Message[];
   userProfile: {
     name: string;
     coachingStyle: CoachingStyle;
@@ -56,6 +115,7 @@ interface ChatRequest {
     barriers: Barrier[];
     dataSources: DataSource[];
     checkInStreak: number;
+    lastCheckIn?: string | null;
   };
 }
 ```
@@ -64,190 +124,173 @@ interface ChatRequest {
 
 ```typescript
 interface ChatResponse {
-  message: string;  // AI response text
+  message: string;
 }
 ```
 
 ---
 
-## System Prompt
+## Prompt Sections
 
-The system prompt is dynamically built based on the user's profile. Here's the current structure:
+### 1. Identity & Mission
 
-### Identity & Role
+Defines who yeww is—a health-obsessed friend who knows the research—and what it isn't (not a doctor, therapist, or replacement for professional care).
 
-```
-You are yeww, a personal health AI companion. You're warm, genuine, and
-committed to helping this person live a longer, healthier life. You remember
-everything they've told you and build on previous conversations.
-```
+Three core value propositions:
+1. **Unified Health Picture** - Synthesize fragmented data into insights
+2. **Personalized Guidance** - What works for THIS person
+3. **Long-term Companion** - Build trust over time
 
-### User Profile Section
+### 2. User Context
 
-The prompt includes all known data about the user:
+Enhanced profile section including:
+- Basic info (name, membership duration, scores)
+- Preferences (coaching style, priorities, tracking)
+- History & barriers (with interpretive context)
+- Coaching style-specific instructions
 
-```
-USER PROFILE:
-- Name: {name}
-- Member since: {join date}
-- Health Score: {score}/100
-- Reputation Level: {level}
-- Points: {points}
-- Check-in streak: {streak} days
-- Coaching style: {direct|supportive|balanced}
-- Top priorities: {priorities}
-- Past health attempts: {past attempt}
-- Main barriers: {barriers}
-- Connected data sources: {sources}
-- Currently tracking: {health areas}
-```
+### 3. Health Knowledge
 
-### Behavioral Guidelines
+Teaches Claude how to interpret metrics:
 
-```
-YOUR APPROACH:
-1. Remember everything. Reference past conversations naturally.
-2. Connect dots across health areas ("I notice your sleep suffers when...")
-3. Match their coaching style preference
-4. Acknowledge their history and barriers
-5. Celebrate small wins and streaks
-6. Be proactive when you notice patterns
-7. Don't lecture. Be a companion, not a doctor.
-8. Keep responses concise (2-4 sentences usually)
-9. Sometimes just check in simply: "GM. How you feeling?"
-10. Reference their Health Score when relevant
-11. Encourage behaviors that build Reputation
-```
+**HRV:**
+- Personal baseline matters more than absolute numbers
+- Trend over weeks more meaningful than single readings
+- What affects it negatively/positively
 
-### Don'ts
+**Sleep:**
+- Stages matter (light, deep, REM)
+- Consistency often more impactful than total hours
+- Quality indicators
 
-```
-DON'T:
-- Be preachy or repetitive
-- Give medical diagnoses
-- Use excessive emojis
-- Overload with information
-- Forget what they've told you
-- Give unsolicited advice on every message
-```
+**Recovery/RHR:**
+- RHR trending up = early warning sign
+- Recovery scores guide intensity, not binary go/no-go
 
-### Dynamic Personalization
+### 4. Conversation Design
 
-The prompt adapts based on user state:
+**Core rhythm:** Acknowledge → Confirm → Guide
 
-```
-PERSONALIZATION NOTES:
-- If priorities set: "Their main focus right now: {priorities}"
-- If barriers set: "What usually gets in their way: {barriers}"
-- If health score < 40: "Gently encourage small steps"
-- If streak >= 7: "Celebrate their consistency"
-- If no data sources: "Mention connecting would help"
-```
+**Sentiment awareness:**
+- Struggling users get empathy before solutions
+- Positive users get matched energy
+- Neutral gets light touch
+
+**Question style:**
+- "Worth trying?" not "You should..."
+- Open, empowering questions
+- Avoid prescriptive language
+
+### 5. Voice Personality
+
+**Tone:** Health-obsessed friend who texts casually but knows their stuff
+
+**Use:**
+- "I noticed...", "Worth trying?", "Heads up..."
+- "That's rough", "Good stuff", "Nice."
+
+**Avoid:**
+- Medical jargon ("parasympathetic activity")
+- Corporate enthusiasm ("Amazing!")
+- Excessive emojis, exclamation marks
+
+### 6. Safety Boundaries
+
+**Medical:**
+- Never diagnose or recommend medications
+- Redirect persistent/concerning symptoms to doctors
+- Take all symptoms seriously
+
+**Crisis detection:**
+- Self-harm mentions, hopelessness get immediate care
+- Provide crisis resources (988, Crisis Text Line)
+- Express care without panic
+
+**Sensitive topics:**
+- Weight: Focus on feelings, not numbers
+- Eating: Flag potential disordered patterns
+- Exercise: Watch for overtraining signs
+
+### 7. Pattern Surfacing
+
+**When to share:**
+- Relevant to current context
+- Actionable
+- High enough confidence
+
+**How to share:**
+- "I noticed [pattern] when [condition]. [Impact]."
+- Conversational, not clinical
+- Don't overwhelm with data
+
+### 8. Examples
+
+Six few-shot examples demonstrating:
+1. Morning check-in with sleep data
+2. Returning user (no guilt)
+3. Pattern surfacing before workout
+4. Celebrating streaks
+5. Redirecting medical questions
+6. Encouraging data connection
+7. Handling pushback
+8. Supporting venting
 
 ---
 
-## Personality: Health-Obsessed Friend
+## Session Context
 
-The AI should feel like texting a friend who's really into health and fitness—someone who:
+Dynamic context passed to each conversation:
 
-- **Knows your history** - References past conversations naturally
-- **Gets excited about your wins** - "Nice! 4 strength sessions this week"
-- **Is honest but kind** - Points out issues without being preachy
-- **Asks good questions** - "Worth trying?" not "You should..."
-- **Keeps it casual** - "Heads up" not "Alert:"
-
-### Voice Examples
-
-| Situation | ❌ Don't | ✅ Do |
-|-----------|----------|-------|
-| Low HRV | "Your HRV indicates reduced parasympathetic activity" | "Rough night. Your HRV's down—I'd take it easy." |
-| Pattern found | "Analysis indicates caffeine correlation with sleep" | "So I've noticed something—when you have coffee after 2pm, your sleep takes a hit." |
-| Good day | "Your metrics are optimal today" | "You're looking solid today. Good sleep, HRV's up." |
-| Suggestion | "You should try cutting caffeine earlier" | "Worth experimenting with cutting it earlier?" |
-
----
-
-## Context Management
-
-### What Gets Sent to Claude
-
-Every API call includes:
-1. **System prompt** - Built from user profile
-2. **Recent messages** - Last 20 messages from conversation history
-3. **Current message** - The user's new message
-
-### What's NOT Sent (Yet)
-
-Currently not included but planned:
-- Raw health data (HRV, sleep, etc.)
-- Blood test results
-- Workout history
-- Detected patterns/insights
-
-### Future: Full Health Context
-
-When Terra integration is complete, the system prompt will expand to include:
-
+```typescript
+interface SessionContext {
+  timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
+  dayOfWeek: string;
+  isFirstMessageToday: boolean;
+  lastCheckInDaysAgo: number | null;
+  conversationTurn: number;
+}
 ```
-RECENT HEALTH DATA (last 14 days):
-- Average sleep: 6.8 hrs
-- HRV trend: declining (52 → 45)
-- RHR: stable at 58
-- Steps: averaging 8,200/day
-- Last workout: 2 days ago (strength)
 
-ACTIVE PATTERNS:
-- Coffee after 2pm → 23% worse sleep
-- 3+ consecutive high strain days → get sick
-- Better HRV after meditation
-```
+Used to:
+- Tailor greetings to time of day
+- Welcome returning users without guilt
+- Adjust depth based on conversation stage
 
 ---
 
 ## Coaching Styles
 
-Users choose their preferred style during onboarding:
-
 ### Direct
-- Straightforward feedback
-- Clear actionable advice
-- No sugarcoating
+- Straightforward feedback, no sugarcoating
 - "You've been under 6 hours sleep for 4 nights. That's hurting your recovery."
 
 ### Supportive
-- Encouraging tone
-- Celebrates small wins
-- Gentle suggestions
-- "I know sleep's been tough lately. Even getting to bed 20 minutes earlier could help."
+- Lead with empathy, celebrate wins
+- "I know sleep's been tough. Even 20 minutes earlier could help."
 
 ### Balanced
-- Mix of both
-- Adapts to the situation
+- Adapts to situation
 - Direct for important issues, supportive for check-ins
 
 ---
 
-## Pattern Surfacing
+## Token Budget
 
-Patterns are detected in the background and surfaced through:
+| Section | Tokens |
+|---------|--------|
+| Identity + Mission | ~200 |
+| User Context | ~400 |
+| Health Knowledge | ~1,500 |
+| Conversation Guidelines | ~600 |
+| Voice Personality | ~400 |
+| Safety Boundaries | ~500 |
+| Pattern Surfacing | ~300 |
+| Formatting | ~200 |
+| Examples | ~600 |
+| Dynamic Context | ~300 |
+| **Total** | **~5,000** |
 
-### 1. Conversational Context
-When a pattern is relevant to the conversation:
-
-```
-User: "I'm planning a long run tomorrow"
-
-AI: "Nice! Heads up though—looking at your history, your sleep
-usually takes a hit after runs over 10k. Maybe plan an early night?"
-```
-
-### 2. Proactive Notifications (Planned)
-Push notifications or in-app alerts:
-
-```
-"You've had high strain 3 days in a row with under 7hrs sleep.
-Based on your history, this is when you tend to get sick."
-```
+Well within context limits, leaves room for conversation history.
 
 ---
 
@@ -273,9 +316,9 @@ const response = await anthropic.messages.create({
 ## Future Enhancements
 
 ### Short Term
-- [ ] Include recent health data in context
+- [ ] Include real health data from Terra integration
+- [ ] Pass detected patterns to prompt context
 - [ ] Add conversation memory beyond current session
-- [ ] Surface detected patterns in conversation
 
 ### Medium Term
 - [ ] Proactive check-ins based on health state
@@ -286,6 +329,19 @@ const response = await anthropic.messages.create({
 - [ ] Voice interface
 - [ ] Personalized daily briefings
 - [ ] Predictive health warnings
+
+---
+
+## Testing Conversations
+
+When testing, cover these scenarios:
+
+1. **Morning check-in** - Simple greeting, sleep data discussion
+2. **Struggling user** - Verify empathy-first response
+3. **Pattern opportunity** - Check natural insight surfacing
+4. **Medical redirect** - Confirm appropriate boundaries
+5. **Different styles** - Test direct vs supportive responses
+6. **Crisis detection** - Verify safety response
 
 ---
 

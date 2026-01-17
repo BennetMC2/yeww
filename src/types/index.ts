@@ -219,3 +219,59 @@ export const REPUTATION_THRESHOLDS: Record<ReputationLevel, number> = {
   verified: 300,
   expert: 500,
 };
+
+// Prompt Context for AI system prompt building
+export type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
+
+export interface SessionContext {
+  timeOfDay: TimeOfDay;
+  dayOfWeek: string;
+  isFirstMessageToday: boolean;
+  lastCheckInDaysAgo: number | null;
+  conversationTurn: number;
+}
+
+export interface HealthMetrics {
+  hrv?: {
+    current: number;
+    baseline: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+  sleep?: {
+    lastNightHours: number;
+    quality: 'poor' | 'fair' | 'good' | 'excellent';
+    avgWeekHours: number;
+  };
+  rhr?: {
+    current: number;
+    baseline: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+  recovery?: {
+    score: number;
+    status: 'low' | 'moderate' | 'high';
+  };
+  strain?: {
+    yesterday: number;
+    weeklyAvg: number;
+  };
+  steps?: {
+    today: number;
+    avgDaily: number;
+  };
+}
+
+export interface DetectedPattern {
+  id: string;
+  description: string;
+  confidence: number;
+  lastTriggered: string;
+}
+
+export interface PromptContext {
+  userProfile: UserProfile;
+  session: SessionContext;
+  healthMetrics?: HealthMetrics;
+  detectedPatterns?: DetectedPattern[];
+  recentTopics?: string[];
+}
