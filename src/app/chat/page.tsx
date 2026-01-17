@@ -46,10 +46,11 @@ export default function ChatPage() {
     setInputValue('');
     setIsSending(true);
 
-    const userMessage = addMessage('user', userMessageContent);
-    setLocalMessages(prev => [...prev, userMessage]);
-
     try {
+      // Save user message and add to local state
+      const userMessage = await addMessage('user', userMessageContent);
+      setLocalMessages(prev => [...prev, userMessage]);
+
       const recentMessages = [...localMessages, userMessage].slice(-20).map(m => ({
         role: m.role,
         content: m.content,
@@ -81,11 +82,11 @@ export default function ChatPage() {
       if (!response.ok) throw new Error('Failed to get response');
 
       const data = await response.json();
-      const assistantMessage = addMessage('assistant', data.message);
+      const assistantMessage = await addMessage('assistant', data.message);
       setLocalMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMessage = addMessage('assistant', "Sorry, I couldn't respond right now. Try again?");
+      const errorMessage = await addMessage('assistant', "Sorry, I couldn't respond right now. Try again?");
       setLocalMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsSending(false);

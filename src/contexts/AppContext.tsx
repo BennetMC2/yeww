@@ -20,9 +20,7 @@ import {
   createDefaultProfile,
   saveUserProfile,
   getConversationHistory,
-  saveConversationHistory,
   getProgressData,
-  saveProgressData,
   addMessage as addMessageToStorage,
   recordCheckIn as recordCheckInStorage,
   addHealthArea as addHealthAreaStorage,
@@ -36,6 +34,7 @@ import {
   setBarriers as setBarriersStorage,
   addPoints as addPointsStorage,
   setSharingPreference as setSharingPreferenceStorage,
+  migrateFromLocalStorage,
 } from '@/lib/storage';
 import {
   calculateHealthScore,
@@ -74,7 +73,7 @@ interface AppContextType {
 
   // Conversations
   conversations: ConversationHistory;
-  addMessage: (role: 'assistant' | 'user', content: string, quickActions?: { label: string; value: string }[]) => Message;
+  addMessage: (role: 'assistant' | 'user', content: string, quickActions?: { label: string; value: string }[]) => Promise<Message>;
 
   // Progress
   progress: ProgressData;
@@ -95,22 +94,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Load data on mount
   useEffect(() => {
-    const loadData = () => {
-      const storedProfile = getUserProfile();
-      const storedConversations = getConversationHistory();
-      const storedProgress = getProgressData();
+    const loadData = async () => {
+      try {
+        // First, migrate any old localStorage data to Supabase
+        await migrateFromLocalStorage();
 
-      if (storedProfile) {
-        setProfile(storedProfile);
-      } else {
+        // Load data from Supabase
+        const storedProfile = await getUserProfile();
+        const storedConversations = await getConversationHistory();
+        const storedProgress = await getProgressData();
+
+        if (storedProfile) {
+          setProfile(storedProfile);
+        } else {
+          // Create new user
+          const newProfile = createDefaultProfile();
+          await saveUserProfile(newProfile);
+          setProfile(newProfile);
+        }
+
+        setConversations(storedConversations);
+        setProgress(storedProgress);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        // Fallback to empty state
         const newProfile = createDefaultProfile();
-        saveUserProfile(newProfile);
         setProfile(newProfile);
+      } finally {
+        setIsLoading(false);
       }
-
-      setConversations(storedConversations);
-      setProgress(storedProgress);
-      setIsLoading(false);
     };
 
     loadData();
@@ -120,7 +132,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setProfile(prev => {
       if (!prev) return prev;
       const updated = { ...prev, name };
-      saveUserProfile(updated);
+      saveUserProfile(updated); // Fire and forget
       return updated;
     });
   }, []);
@@ -148,76 +160,73 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!prev) return prev;
       const updated = { ...prev, onboardingCompleted: true };
       saveUserProfile(updated);
+      // Add milestone
+      addMilestoneStorage('Started health journey with yeww').then(() => {
+        getProgressData().then(setProgress);
+      });
       return updated;
     });
-    // Add a milestone for starting the journey
-    addMilestoneStorage('Started health journey with yeww');
-    setProgress(getProgressData());
   }, []);
 
   const addHealthArea = useCallback((areaId: string, areaName: string) => {
-    addHealthAreaStorage(areaId, areaName);
-    setProfile(getUserProfile());
-    addMilestoneStorage(`Started tracking ${areaName}`);
-    setProgress(getProgressData());
+    addHealthAreaStorage(areaId, areaName).then(updatedProfile => {
+      setProfile(updatedProfile);
+      addMilestoneStorage(`Started tracking ${areaName}`).then(() => {
+        getProgressData().then(setProgress);
+      });
+    });
   }, []);
 
   const removeHealthArea = useCallback((areaId: string) => {
-    removeHealthAreaStorage(areaId);
-    setProfile(getUserProfile());
+    removeHealthAreaStorage(areaId).then(setProfile);
   }, []);
 
   const recordCheckIn = useCallback(() => {
-    recordCheckInStorage();
-    const updatedProfile = getUserProfile();
-    setProfile(updatedProfile);
+    recordCheckInStorage().then(async (updatedProfile) => {
+      setProfile(updatedProfile);
 
-    // Award points for check-in
-    if (updatedProfile) {
-      addPointsStorage('check-in', POINTS_CONFIG.CHECK_IN, 'Daily check-in');
+      // Award points for check-in
+      await addPointsStorage('check-in', POINTS_CONFIG.CHECK_IN, 'Daily check-in');
 
       // Award streak bonus after day 3
       const streakBonus = calculateStreakBonus(updatedProfile.checkInStreak);
       if (streakBonus > 0) {
-        addPointsStorage('streak-bonus', streakBonus, `${updatedProfile.checkInStreak} day streak bonus`);
+        await addPointsStorage('streak-bonus', streakBonus, `${updatedProfile.checkInStreak} day streak bonus`);
       }
 
       // Refresh profile with new points
-      setProfile(getUserProfile());
-    }
+      const refreshedProfile = await getUserProfile();
+      if (refreshedProfile) {
+        setProfile(refreshedProfile);
+      }
+    });
   }, []);
 
   // New onboarding data methods
   const setDataSources = useCallback((sources: DataSource[]) => {
-    setDataSourcesStorage(sources);
-    setProfile(getUserProfile());
+    setDataSourcesStorage(sources).then(setProfile);
   }, []);
 
   const setPriorities = useCallback((priorities: Priority[]) => {
-    setPrioritiesStorage(priorities);
-    setProfile(getUserProfile());
+    setPrioritiesStorage(priorities).then(setProfile);
   }, []);
 
   const setPastAttempt = useCallback((attempt: PastAttempt) => {
-    setPastAttemptStorage(attempt);
-    setProfile(getUserProfile());
+    setPastAttemptStorage(attempt).then(setProfile);
   }, []);
 
   const setBarriers = useCallback((barriers: Barrier[]) => {
-    setBarriersStorage(barriers);
-    setProfile(getUserProfile());
+    setBarriersStorage(barriers).then(setProfile);
   }, []);
 
   // Points system
   const addPoints = useCallback((type: PointsTransaction['type'], amount: number, description: string) => {
-    addPointsStorage(type, amount, description);
-    setProfile(getUserProfile());
+    addPointsStorage(type, amount, description).then(setProfile);
   }, []);
 
   // Sharing preferences
   const setSharingPreference = useCallback((key: keyof SharingPreferences, value: boolean) => {
-    setSharingPreferenceStorage(key, value);
-    setProfile(getUserProfile());
+    setSharingPreferenceStorage(key, value).then(setProfile);
   }, []);
 
   // Recalculate scores
@@ -241,29 +250,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const addMessage = useCallback((role: 'assistant' | 'user', content: string, quickActions?: { label: string; value: string }[]) => {
-    const message = addMessageToStorage(role, content, quickActions);
-    setConversations(getConversationHistory());
+  const addMessage = useCallback(async (role: 'assistant' | 'user', content: string, quickActions?: { label: string; value: string }[]) => {
+    const message = await addMessageToStorage(role, content, quickActions);
+    const updatedConversations = await getConversationHistory();
+    setConversations(updatedConversations);
     return message;
   }, []);
 
   const addProgressEntry = useCallback((entry: { type: 'photo' | 'milestone' | 'note'; category: 'body' | 'skin' | 'general'; content: string; note?: string }) => {
-    addProgressEntryStorage(entry);
-    setProgress(getProgressData());
+    addProgressEntryStorage(entry).then(() => {
+      getProgressData().then(setProgress);
+    });
   }, []);
 
   const addMilestone = useCallback((content: string) => {
-    addMilestoneStorage(content);
-    setProgress(getProgressData());
+    addMilestoneStorage(content).then(() => {
+      getProgressData().then(setProgress);
+    });
   }, []);
 
   const resetAll = useCallback(() => {
-    resetAllData();
-    const newProfile = createDefaultProfile();
-    saveUserProfile(newProfile);
-    setProfile(newProfile);
-    setConversations({ conversations: [] });
-    setProgress({ entries: [] });
+    resetAllData().then(async () => {
+      const newProfile = createDefaultProfile();
+      await saveUserProfile(newProfile);
+      setProfile(newProfile);
+      setConversations({ conversations: [] });
+      setProgress({ entries: [] });
+    });
   }, []);
 
   return (
