@@ -21,14 +21,15 @@ export default function ProfilePage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showPointsHistory, setShowPointsHistory] = useState(false);
 
-  // Redirect to onboarding if not completed (skip with ?skip=1 for testing)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const skip = params.get('skip') === '1';
-    if (!isLoading && !profile?.onboardingCompleted && !skip) {
-      router.replace('/onboarding');
-    }
-  }, [isLoading, profile, router]);
+  // Redirect to onboarding if not completed
+  // TEMPORARILY DISABLED for Terra testing
+  // useEffect(() => {
+  //   const params = new URLSearchParams(window.location.search);
+  //   const skip = params.get('skip') === '1';
+  //   if (!isLoading && !profile?.onboardingCompleted && !skip) {
+  //     router.replace('/onboarding');
+  //   }
+  // }, [isLoading, profile, router]);
 
   useEffect(() => {
     if (profile) {
@@ -36,10 +37,8 @@ export default function ProfilePage() {
     }
   }, [profile]);
 
-  // Allow bypass with ?skip=1 for testing
-  const skipOnboarding = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('skip') === '1';
-
-  if (isLoading || (!profile?.onboardingCompleted && !skipOnboarding)) {
+  // TEMPORARILY DISABLED onboarding check for Terra testing
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAF6F1]">
         <p className="text-[#B5AFA8]">Loading...</p>
