@@ -47,6 +47,15 @@ export default function ProfilePage() {
     );
   }
 
+  // After this point, profile is guaranteed to exist (or we show empty state)
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF6F1]">
+        <p className="text-[#B5AFA8]">No profile found</p>
+      </div>
+    );
+  }
+
   const handleSaveName = () => {
     if (nameInput.trim()) {
       setName(nameInput.trim());
@@ -60,6 +69,7 @@ export default function ProfilePage() {
   };
 
   const handleSharingToggle = (key: keyof SharingPreferences) => {
+    if (!profile) return;
     setSharingPreference(key, !profile.sharingPreferences[key]);
   };
 
@@ -100,6 +110,7 @@ export default function ProfilePage() {
   ];
 
   const toggleApp = (app: ConnectedApp) => {
+    if (!profile) return;
     const current = profile.connectedApps || [];
     if (current.includes(app)) {
       setConnectedApps(current.filter(a => a !== app));
