@@ -8,6 +8,7 @@ import {
   CoachingStyle,
   ConnectedApp,
   Message,
+  MessageImage,
   DataSource,
   Priority,
   PastAttempt,
@@ -73,7 +74,7 @@ interface AppContextType {
 
   // Conversations
   conversations: ConversationHistory;
-  addMessage: (role: 'assistant' | 'user', content: string, quickActions?: { label: string; value: string }[]) => Promise<Message>;
+  addMessage: (role: 'assistant' | 'user', content: string, options?: { quickActions?: { label: string; value: string }[]; images?: MessageImage[] }) => Promise<Message>;
 
   // Progress
   progress: ProgressData;
@@ -250,8 +251,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const addMessage = useCallback(async (role: 'assistant' | 'user', content: string, quickActions?: { label: string; value: string }[]) => {
-    const message = await addMessageToStorage(role, content, quickActions);
+  const addMessage = useCallback(async (role: 'assistant' | 'user', content: string, options?: { quickActions?: { label: string; value: string }[]; images?: MessageImage[] }) => {
+    const message = await addMessageToStorage(role, content, options);
     const updatedConversations = await getConversationHistory();
     setConversations(updatedConversations);
     return message;

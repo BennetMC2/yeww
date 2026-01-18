@@ -9,6 +9,7 @@ import BottomNav from '@/components/BottomNav';
 import HealthScoreGauge from '@/components/scores/HealthScoreGauge';
 import ReputationBadge from '@/components/scores/ReputationBadge';
 import PointsDisplay from '@/components/scores/PointsDisplay';
+import HealthMetricsDashboard from '@/components/HealthMetricsDashboard';
 import { useApp } from '@/contexts/AppContext';
 import { PRIORITIES } from '@/types';
 
@@ -158,6 +159,14 @@ export default function HomePage() {
             <ReputationBadge level={profile.reputationLevel} size="md" showLabel={false} />
             <p className="text-xs text-[#8A8580] mt-1">{profile.reputationLevel}</p>
           </div>
+        </div>
+
+        {/* Health Metrics Dashboard */}
+        <div className="mb-6">
+          <h2 className="text-sm font-medium text-[#8A8580] uppercase tracking-wider mb-3 px-1">
+            Today&apos;s Metrics
+          </h2>
+          <HealthMetricsDashboard userId={profile.id} />
         </div>
 
         {/* Daily Check-in Card */}

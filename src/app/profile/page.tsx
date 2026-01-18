@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, User, Flame, Check, AlertTriangle, X, Coins, History } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Flame, Check, AlertTriangle, X, Coins, History, Watch } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { CoachingStyle, ConnectedApp, SharingPreferences } from '@/types';
 import ReputationBadge from '@/components/scores/ReputationBadge';
 import PointsDisplay from '@/components/scores/PointsDisplay';
+import ConnectWearable from '@/components/ConnectWearable';
 import { getPointsToNextLevel, getNextReputationLevel, getReputationLevelLabel, REPUTATION_THRESHOLDS } from '@/lib/scores';
 
 export default function ProfilePage() {
@@ -276,6 +277,17 @@ export default function ProfilePage() {
                 </div>
               </div>
             </Link>
+          </div>
+        </section>
+
+        {/* Connected Devices (Terra) */}
+        <section className="mb-8">
+          <h2 className="text-sm font-medium text-[#8A8580] uppercase tracking-wider mb-3">
+            Connected Devices
+          </h2>
+
+          <div className="bg-white rounded-2xl p-4">
+            <ConnectWearable userId={profile.id} />
           </div>
         </section>
 

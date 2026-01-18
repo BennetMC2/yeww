@@ -83,10 +83,17 @@ export interface QuickAction {
   value: string;
 }
 
+export interface MessageImage {
+  id: string;
+  data: string;  // base64 data URL
+  mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+}
+
 export interface Message {
   id: string;
   role: MessageRole;
   content: string;
+  images?: MessageImage[];
   timestamp: string;
   quickActions?: QuickAction[];
 }

@@ -7,22 +7,32 @@ import {
   Barrier,
   DataSource,
   ReputationLevel,
+  HealthArea,
+  HealthMetrics,
 } from '@/types';
 import { buildSystemPromptFromProfile } from '@/lib/promptBuilder';
+import { getLatestHealthMetrics } from '@/lib/healthData';
 
 const anthropic = new Anthropic();
+
+interface MessageImage {
+  data: string;  // base64 data URL
+  mediaType: string;
+}
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  images?: MessageImage[];
 }
 
 interface ChatRequest {
   messages: Message[];
   userProfile: {
+    id?: string;
     name: string;
     coachingStyle: CoachingStyle;
-    healthAreas: { name: string }[];
+    healthAreas: HealthArea[];
     createdAt: string;
     healthScore: number;
     reputationLevel: ReputationLevel;
@@ -36,6 +46,56 @@ interface ChatRequest {
   };
 }
 
+// Helper to format messages for Claude API (with vision support)
+function formatMessagesForClaude(messages: Message[]): Anthropic.MessageParam[] {
+  return messages.map((msg) => {
+    // If message has images, create content blocks
+    if (msg.images && msg.images.length > 0) {
+      const contentBlocks: Anthropic.ContentBlockParam[] = [];
+
+      // Add images first
+      for (const img of msg.images) {
+        // Strip the data URL prefix to get raw base64
+        const base64Data = img.data.replace(/^data:image\/\w+;base64,/, '');
+
+        contentBlocks.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: base64Data,
+          },
+        });
+      }
+
+      // Add text content if present
+      if (msg.content) {
+        contentBlocks.push({
+          type: 'text',
+          text: msg.content,
+        });
+      } else {
+        // Default prompt if no text with image
+        contentBlocks.push({
+          type: 'text',
+          text: 'What do you see in this image? If it\'s food, estimate the calories and nutritional content. If it\'s health data, extract and summarize the key metrics.',
+        });
+      }
+
+      return {
+        role: msg.role,
+        content: contentBlocks,
+      };
+    }
+
+    // Text-only message
+    return {
+      role: msg.role,
+      content: msg.content,
+    };
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { messages, userProfile }: ChatRequest = await request.json();
@@ -43,14 +103,25 @@ export async function POST(request: NextRequest) {
     // Calculate conversation turn (number of user messages)
     const conversationTurn = messages.filter(m => m.role === 'user').length;
 
-    // Build comprehensive system prompt using the new prompt builder
-    const systemPrompt = buildSystemPromptFromProfile(userProfile, conversationTurn);
+    // Fetch real health metrics from Terra if user has connected devices
+    let healthMetrics: HealthMetrics | undefined;
+    if (userProfile.id) {
+      try {
+        const metrics = await getLatestHealthMetrics(userProfile.id);
+        if (metrics) {
+          healthMetrics = metrics;
+        }
+      } catch (error) {
+        // Silently fail - health metrics are optional
+        console.log('Could not fetch health metrics:', error);
+      }
+    }
 
-    // Format messages for Claude API
-    const formattedMessages = messages.map((msg) => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content,
-    }));
+    // Build comprehensive system prompt using the new prompt builder
+    const systemPrompt = buildSystemPromptFromProfile(userProfile, conversationTurn, healthMetrics);
+
+    // Format messages for Claude API (with vision support)
+    const formattedMessages = formatMessagesForClaude(messages);
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',

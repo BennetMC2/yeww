@@ -3,6 +3,14 @@ import {
   UserProfile,
   SessionContext,
   TimeOfDay,
+  CoachingStyle,
+  ReputationLevel,
+  Priority,
+  PastAttempt,
+  Barrier,
+  DataSource,
+  HealthArea,
+  HealthMetrics,
 } from '@/types';
 
 import {
@@ -124,42 +132,39 @@ export function buildSystemPrompt(context: PromptContext): string {
  */
 export function buildSystemPromptFromProfile(
   userProfile: {
+    id?: string;
     name: string;
-    coachingStyle: 'direct' | 'supportive' | 'balanced';
-    healthAreas: { name: string }[];
+    coachingStyle: CoachingStyle;
+    healthAreas: HealthArea[];
     createdAt: string;
     healthScore: number;
-    reputationLevel: 'starter' | 'regular' | 'trusted' | 'verified' | 'expert';
+    reputationLevel: ReputationLevel;
     points: number;
-    priorities: string[];
-    pastAttempt: 'many-times' | 'a-few-times' | 'once-or-twice' | 'not-really' | null;
-    barriers: string[];
-    dataSources: string[];
+    priorities: Priority[];
+    pastAttempt: PastAttempt | null;
+    barriers: Barrier[];
+    dataSources: DataSource[];
     checkInStreak: number;
     lastCheckIn?: string | null;
   },
-  conversationTurn: number = 1
+  conversationTurn: number = 1,
+  healthMetrics?: HealthMetrics
 ): string {
   // Convert to full UserProfile format
   const fullProfile: UserProfile = {
-    id: 'current-user',
+    id: userProfile.id || 'current-user',
     name: userProfile.name,
     createdAt: userProfile.createdAt,
     coachingStyle: userProfile.coachingStyle,
     connectedApps: [],
-    healthAreas: userProfile.healthAreas.map((a, i) => ({
-      id: `area-${i}`,
-      name: a.name,
-      active: true,
-      addedAt: userProfile.createdAt,
-    })),
+    healthAreas: userProfile.healthAreas,
     onboardingCompleted: true,
     lastCheckIn: userProfile.lastCheckIn || null,
     checkInStreak: userProfile.checkInStreak,
-    dataSources: userProfile.dataSources as UserProfile['dataSources'],
-    priorities: userProfile.priorities as UserProfile['priorities'],
+    dataSources: userProfile.dataSources,
+    priorities: userProfile.priorities,
     pastAttempt: userProfile.pastAttempt,
-    barriers: userProfile.barriers as UserProfile['barriers'],
+    barriers: userProfile.barriers,
     healthScore: userProfile.healthScore,
     reputationLevel: userProfile.reputationLevel,
     reputationPoints: userProfile.points,
@@ -173,5 +178,11 @@ export function buildSystemPromptFromProfile(
   };
 
   const context = createPromptContext(fullProfile, conversationTurn);
+
+  // Add health metrics if available from Terra
+  if (healthMetrics) {
+    context.healthMetrics = healthMetrics;
+  }
+
   return buildSystemPrompt(context);
 }

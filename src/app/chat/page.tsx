@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, Camera, ImagePlus, X } from 'lucide-react';
+import Image from 'next/image';
 import BottomNav from '@/components/BottomNav';
 import { useApp } from '@/contexts/AppContext';
-import { Message } from '@/types';
+import { Message, MessageImage } from '@/types';
+import { compressImage } from '@/lib/imageUtils';
 
 export default function ChatPage() {
   const router = useRouter();
@@ -13,8 +15,11 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  const [pendingImages, setPendingImages] = useState<MessageImage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isLoading && !profile?.onboardingCompleted) {
@@ -39,21 +44,77 @@ export default function ChatPage() {
     }
   }, [inputValue]);
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Limit to 4 images per message
+      if (pendingImages.length >= 4) {
+        alert('Maximum 4 images per message');
+        return;
+      }
+
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        alert('Please select a valid image (JPEG, PNG, GIF, or WebP)');
+        return;
+      }
+
+      // Validate file size (max 10MB before compression)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image must be less than 10MB');
+        return;
+      }
+
+      try {
+        // Compress image to reduce storage size
+        const compressed = await compressImage(file, {
+          maxWidth: 1200,
+          maxHeight: 1200,
+          quality: 0.8,
+        });
+
+        setPendingImages(prev => [...prev, {
+          id: crypto.randomUUID(),
+          data: compressed.data,
+          mediaType: compressed.mediaType as MessageImage['mediaType']
+        }]);
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        alert('Failed to process image. Please try again.');
+      }
+    }
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  };
+
+  const removePendingImage = (id: string) => {
+    setPendingImages(prev => prev.filter(img => img.id !== id));
+  };
+
   const sendMessage = async () => {
-    if (!inputValue.trim() || isSending || !profile) return;
+    if ((!inputValue.trim() && pendingImages.length === 0) || isSending || !profile) return;
 
     const userMessageContent = inputValue.trim();
+    const userMessageImages = pendingImages.length > 0 ? pendingImages : undefined;
+
     setInputValue('');
+    setPendingImages([]);
     setIsSending(true);
 
     try {
       // Save user message and add to local state
-      const userMessage = await addMessage('user', userMessageContent);
+      const userMessage = await addMessage('user', userMessageContent, { images: userMessageImages });
       setLocalMessages(prev => [...prev, userMessage]);
 
+      // Prepare messages for API (include images)
       const recentMessages = [...localMessages, userMessage].slice(-20).map(m => ({
         role: m.role,
         content: m.content,
+        images: m.images?.map(img => ({
+          data: img.data,
+          mediaType: img.mediaType
+        }))
       }));
 
       const response = await fetch('/api/chat', {
@@ -62,11 +123,11 @@ export default function ChatPage() {
         body: JSON.stringify({
           messages: recentMessages,
           userProfile: {
+            id: profile.id,
             name: profile.name,
             coachingStyle: profile.coachingStyle,
             healthAreas: profile.healthAreas,
             createdAt: profile.createdAt,
-            // Enhanced context fields
             healthScore: profile.healthScore,
             reputationLevel: profile.reputationLevel,
             points: profile.points,
@@ -75,6 +136,7 @@ export default function ChatPage() {
             barriers: profile.barriers,
             dataSources: profile.dataSources,
             checkInStreak: profile.checkInStreak,
+            lastCheckIn: profile.lastCheckIn,
           },
         }),
       });
@@ -143,7 +205,26 @@ export default function ChatPage() {
                 {message.role === 'user' ? (
                   <div className="flex justify-end">
                     <div className="max-w-[85%] bg-[#FFE8DC] rounded-3xl rounded-br-lg px-5 py-3">
-                      <p className="text-[#2D2A26]">{message.content}</p>
+                      {/* User images */}
+                      {message.images && message.images.length > 0 && (
+                        <div className="mb-2">
+                          {message.images.map((img) => (
+                            <div key={img.id} className="relative rounded-2xl overflow-hidden">
+                              <Image
+                                src={img.data}
+                                alt="Uploaded image"
+                                width={200}
+                                height={200}
+                                className="max-w-full h-auto rounded-2xl"
+                                style={{ maxHeight: '200px', objectFit: 'cover' }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {message.content && (
+                        <p className="text-[#2D2A26]">{message.content}</p>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -169,7 +250,69 @@ export default function ChatPage() {
 
       {/* Input */}
       <div className="sticky bottom-20 px-6 py-4 bg-[#FAF6F1]">
-        <div className="flex items-end gap-3 bg-[#F5EDE4] rounded-3xl px-4 py-3">
+        {/* Image previews */}
+        {pendingImages.length > 0 && (
+          <div className="mb-3 flex gap-2 flex-wrap">
+            {pendingImages.map((img) => (
+              <div key={img.id} className="relative">
+                <div className="relative rounded-2xl overflow-hidden border-2 border-[#E07A5F]">
+                  <Image
+                    src={img.data}
+                    alt="Preview"
+                    width={80}
+                    height={80}
+                    className="w-20 h-20 object-cover"
+                  />
+                  <button
+                    onClick={() => removePendingImage(img.id)}
+                    className="absolute top-1 right-1 w-5 h-5 bg-[#2D2A26] bg-opacity-70 rounded-full flex items-center justify-center text-white hover:bg-opacity-90 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-end gap-2 bg-[#F5EDE4] rounded-3xl px-4 py-3">
+          {/* Hidden file inputs */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            capture="environment"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+
+          {/* Camera button */}
+          <button
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={isSending}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#B5AFA8] hover:text-[#2D2A26] hover:bg-[#EBE3DA] disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+            title="Take photo"
+          >
+            <Camera className="w-5 h-5" />
+          </button>
+
+          {/* Upload button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSending}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#B5AFA8] hover:text-[#2D2A26] hover:bg-[#EBE3DA] disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+            title="Upload image"
+          >
+            <ImagePlus className="w-5 h-5" />
+          </button>
+
           <textarea
             ref={inputRef}
             placeholder="Message..."
@@ -182,7 +325,7 @@ export default function ChatPage() {
           />
           <button
             onClick={sendMessage}
-            disabled={!inputValue.trim() || isSending}
+            disabled={(!inputValue.trim() && pendingImages.length === 0) || isSending}
             className="w-9 h-9 rounded-full bg-[#E07A5F] text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 hover:bg-[#D36B4F] active:scale-95 flex-shrink-0"
           >
             <ArrowUp className="w-5 h-5" />

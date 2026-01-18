@@ -122,7 +122,20 @@ export function createDefaultProfile(): UserProfile {
 
 export async function getUserProfile(): Promise<UserProfile | null> {
   const userId = getLocalUserId();
-  if (!userId) return null;
+  if (!userId) {
+    // Check for fallback profile
+    if (isBrowser) {
+      const fallback = localStorage.getItem('yeww_profile_fallback');
+      if (fallback) {
+        try {
+          return JSON.parse(fallback) as UserProfile;
+        } catch {
+          // Invalid JSON, ignore
+        }
+      }
+    }
+    return null;
+  }
 
   try {
     // Fetch user and their points history
@@ -137,6 +150,17 @@ export async function getUserProfile(): Promise<UserProfile | null> {
     ]);
 
     if (userResult.error || !userResult.data) {
+      // Try fallback
+      if (isBrowser) {
+        const fallback = localStorage.getItem('yeww_profile_fallback');
+        if (fallback) {
+          try {
+            return JSON.parse(fallback) as UserProfile;
+          } catch {
+            // Invalid JSON, ignore
+          }
+        }
+      }
       return null;
     }
 
@@ -151,6 +175,17 @@ export async function getUserProfile(): Promise<UserProfile | null> {
     return dbUserToProfile(userResult.data, pointsHistory);
   } catch (error) {
     console.error('Error reading user profile:', error);
+    // Try fallback on error
+    if (isBrowser) {
+      const fallback = localStorage.getItem('yeww_profile_fallback');
+      if (fallback) {
+        try {
+          return JSON.parse(fallback) as UserProfile;
+        } catch {
+          // Invalid JSON, ignore
+        }
+      }
+    }
     return null;
   }
 }
@@ -164,14 +199,29 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
       .upsert(dbUser, { onConflict: 'id' });
 
     if (error) {
-      console.error('Error saving user profile:', error);
+      console.error('Error saving user profile to Supabase:', error.message || error);
+      // Still store user ID locally so app works offline
+      setLocalUserId(profile.id);
+      // Fallback: store profile in localStorage
+      if (isBrowser) {
+        localStorage.setItem('yeww_profile_fallback', JSON.stringify(profile));
+      }
       return;
     }
 
     // Store user ID locally for future sessions
     setLocalUserId(profile.id);
+    // Clear fallback if save succeeded
+    if (isBrowser) {
+      localStorage.removeItem('yeww_profile_fallback');
+    }
   } catch (error) {
     console.error('Error saving user profile:', error);
+    // Still store user ID locally so app works
+    setLocalUserId(profile.id);
+    if (isBrowser) {
+      localStorage.setItem('yeww_profile_fallback', JSON.stringify(profile));
+    }
   }
 }
 
@@ -250,9 +300,32 @@ export async function recordCheckIn(): Promise<UserProfile> {
 
 // ============ Conversations ============
 
+const CONVERSATIONS_FALLBACK_KEY = 'yeww_conversations_fallback';
+
+function getLocalConversations(): ConversationHistory {
+  if (!isBrowser) return { conversations: [] };
+  const stored = localStorage.getItem(CONVERSATIONS_FALLBACK_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored) as ConversationHistory;
+    } catch {
+      return { conversations: [] };
+    }
+  }
+  return { conversations: [] };
+}
+
+function saveLocalConversations(history: ConversationHistory): void {
+  if (!isBrowser) return;
+  localStorage.setItem(CONVERSATIONS_FALLBACK_KEY, JSON.stringify(history));
+}
+
 export async function getConversationHistory(): Promise<ConversationHistory> {
+  // Always get localStorage data first
+  const localHistory = getLocalConversations();
+
   const userId = getLocalUserId();
-  if (!userId) return { conversations: [] };
+  if (!userId) return localHistory;
 
   try {
     // Get all conversations with their messages
@@ -262,9 +335,9 @@ export async function getConversationHistory(): Promise<ConversationHistory> {
       .eq('user_id', userId)
       .order('date', { ascending: false });
 
-    if (error || !convos) {
-      console.error('Error reading conversations:', error);
-      return { conversations: [] };
+    if (error || !convos || convos.length === 0) {
+      // No Supabase data, return localStorage
+      return localHistory;
     }
 
     const conversations: Conversation[] = convos.map((c) => ({
@@ -283,10 +356,20 @@ export async function getConversationHistory(): Promise<ConversationHistory> {
         })),
     }));
 
+    // Merge with localStorage (localStorage takes precedence for today's messages)
+    const today = new Date().toISOString().split('T')[0];
+    const localToday = localHistory.conversations.find(c => c.date === today);
+
+    if (localToday && localToday.messages.length > 0) {
+      // Replace or add today's conversation from localStorage
+      const filtered = conversations.filter(c => c.date !== today);
+      return { conversations: [localToday, ...filtered] };
+    }
+
     return { conversations };
   } catch (error) {
     console.error('Error reading conversations:', error);
-    return { conversations: [] };
+    return localHistory;
   }
 }
 
@@ -299,64 +382,108 @@ export async function getTodayConversation(): Promise<Conversation | null> {
 export async function addMessage(
   role: 'assistant' | 'user',
   content: string,
-  quickActions?: { label: string; value: string }[]
+  options?: {
+    quickActions?: { label: string; value: string }[];
+    images?: Message['images'];
+  }
 ): Promise<Message> {
   const userId = getLocalUserId();
-  if (!userId) {
-    throw new Error('No user ID found');
-  }
-
   const today = new Date().toISOString().split('T')[0];
+  const now = new Date().toISOString();
 
-  try {
-    // Get or create today's conversation
-    let { data: conversation } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('date', today)
-      .single();
+  const quickActions = options?.quickActions;
+  const images = options?.images;
 
-    if (!conversation) {
-      const { data: newConvo, error: convoError } = await supabase
+  // Create message object
+  const newMessage: Message = {
+    id: crypto.randomUUID(),
+    role,
+    content,
+    images,
+    timestamp: now,
+    quickActions,
+  };
+
+  // Try Supabase first (note: images stored in localStorage only for now)
+  if (userId) {
+    try {
+      // Get or create today's conversation
+      let { data: conversation } = await supabase
         .from('conversations')
-        .insert({ user_id: userId, date: today })
         .select('id')
+        .eq('user_id', userId)
+        .eq('date', today)
         .single();
 
-      if (convoError || !newConvo) {
-        throw new Error('Failed to create conversation');
+      if (!conversation) {
+        const { data: newConvo, error: convoError } = await supabase
+          .from('conversations')
+          .insert({ user_id: userId, date: today })
+          .select('id')
+          .single();
+
+        if (!convoError && newConvo) {
+          conversation = newConvo;
+        }
       }
-      conversation = newConvo;
+
+      if (conversation) {
+        // Add the message (images stored in localStorage, not Supabase for now)
+        const { data: message, error: msgError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversation.id,
+            role,
+            content,
+            quick_actions: quickActions || null,
+          })
+          .select('id, created_at')
+          .single();
+
+        if (!msgError && message) {
+          // Still store in localStorage to preserve images
+          const history = getLocalConversations();
+          let todayConvo = history.conversations.find((c) => c.date === today);
+          if (!todayConvo) {
+            todayConvo = { id: crypto.randomUUID(), date: today, messages: [] };
+            history.conversations.unshift(todayConvo);
+          }
+          const msgWithImages: Message = {
+            id: message.id,
+            role,
+            content,
+            images,
+            timestamp: message.created_at,
+            quickActions,
+          };
+          todayConvo.messages.push(msgWithImages);
+          saveLocalConversations(history);
+
+          return msgWithImages;
+        }
+      }
+    } catch (error) {
+      console.error('Supabase message save failed, using localStorage:', error);
     }
-
-    // Add the message
-    const { data: message, error: msgError } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: conversation.id,
-        role,
-        content,
-        quick_actions: quickActions || null,
-      })
-      .select('id, created_at')
-      .single();
-
-    if (msgError || !message) {
-      throw new Error('Failed to add message');
-    }
-
-    return {
-      id: message.id,
-      role,
-      content,
-      timestamp: message.created_at,
-      quickActions,
-    };
-  } catch (error) {
-    console.error('Error adding message:', error);
-    throw error;
   }
+
+  // Fallback to localStorage
+  const history = getLocalConversations();
+  let todayConvo = history.conversations.find((c) => c.date === today);
+
+  if (!todayConvo) {
+    todayConvo = {
+      id: crypto.randomUUID(),
+      date: today,
+      messages: [],
+    };
+    history.conversations.unshift(todayConvo);
+  }
+
+  todayConvo.messages.push(newMessage);
+  saveLocalConversations(history);
+
+  return newMessage;
 }
 
 export async function getAllMessages(): Promise<Message[]> {
