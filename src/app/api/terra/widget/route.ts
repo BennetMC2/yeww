@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const successRedirectUrl = `${appUrl}/profile?terra=connected`;
-    const failureRedirectUrl = `${appUrl}/profile?terra=failed`;
+    const successRedirectUrl = `${appUrl}/profile?terra=connected&skip=1`;
+    const failureRedirectUrl = `${appUrl}/profile?terra=failed&skip=1`;
 
     const session = await generateWidgetSession(
       userId,
