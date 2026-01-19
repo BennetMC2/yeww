@@ -253,15 +253,16 @@ export default function OnboardingPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [isConnectingTerra, setIsConnectingTerra] = useState(false);
   const [terraConnectedDevices, setTerraConnectedDevices] = useState<string[]>([]);
+  const [animatedPoints, setAnimatedPoints] = useState(0);
 
-  // Total steps (accounting for conditional step 9)
+  // Total steps (accounting for conditional step 10 - barriers)
   const shouldShowBarriers = localPastAttempt && localPastAttempt !== 'not-really';
-  const totalSteps = shouldShowBarriers ? 16 : 15;
+  const totalSteps = shouldShowBarriers ? 17 : 16;
 
   // Get current step index for progress bar
   const getStepIndex = () => {
-    if (step <= 8) return step;
-    if (step === 9) return shouldShowBarriers ? 9 : 9; // This shouldn't happen if properly skipped
+    if (step <= 9) return step;
+    if (step === 10) return shouldShowBarriers ? 10 : 10; // This shouldn't happen if properly skipped
     return shouldShowBarriers ? step : step - 1;
   };
 
@@ -283,17 +284,18 @@ export default function OnboardingPage() {
       case 3: return 2; // Fragmentation
       case 4: return 4; // Scattered (animated sequence)
       case 5: return 4; // Promise
-      case 6: return 1; // Timeline
-      case 7: return 2; // Priorities
-      case 8: return 1; // Past attempts
-      case 9: return 2; // Barriers
-      case 10: return 1; // Coaching style
-      case 11: return 2; // Connect data
-      case 12: return 2; // Health score
-      case 13: return 2; // Reputation
-      case 14: return 2; // Points
-      case 15: return 2; // Commitment
-      case 16: return 4; // AI intro
+      case 6: return 3; // Privacy & Security
+      case 7: return 1; // Timeline
+      case 8: return 2; // Priorities
+      case 9: return 1; // Past attempts
+      case 10: return 2; // Barriers
+      case 11: return 1; // Coaching style
+      case 12: return 2; // Connect data
+      case 13: return 2; // Health score
+      case 14: return 2; // Reputation
+      case 15: return 2; // Points
+      case 16: return 2; // Commitment
+      case 17: return 4; // AI intro
       default: return 1;
     }
   };
@@ -316,7 +318,7 @@ export default function OnboardingPage() {
 
         if (currentMessage < messageCount) {
           // Longer delays for dramatic screens
-          const delay = step === 4 ? 1200 : step === 16 ? 1000 : 800;
+          const delay = step === 4 ? 1200 : step === 17 ? 1000 : 800;
           setTimeout(showNextMessage, delay);
         } else {
           setTimeout(() => setContentVisible(true), 500);
@@ -334,17 +336,42 @@ export default function OnboardingPage() {
       }
 
       // Special animation for timeline screen
-      if (step === 6) {
+      if (step === 7) {
         for (let i = 1; i <= 5; i++) {
           setTimeout(() => setTimelineItemsVisible(i), 800 + i * 400);
         }
       }
 
       // Special animation for AI intro
-      if (step === 16) {
+      if (step === 17) {
         for (let i = 1; i <= 4; i++) {
           setTimeout(() => setAiMessagesVisible(i), 500 + i * 1000);
         }
+      }
+
+      // Special animation for points screen - tally up to 100
+      if (step === 15) {
+        setAnimatedPoints(0);
+        const targetPoints = 100;
+        const duration = 1500; // 1.5 seconds
+        const steps = 30;
+        const increment = targetPoints / steps;
+        const intervalTime = duration / steps;
+
+        let current = 0;
+        const startDelay = setTimeout(() => {
+          const interval = setInterval(() => {
+            current += increment;
+            if (current >= targetPoints) {
+              setAnimatedPoints(targetPoints);
+              clearInterval(interval);
+            } else {
+              setAnimatedPoints(Math.round(current));
+            }
+          }, intervalTime);
+        }, 1200); // Start after the badge appears
+
+        return () => clearTimeout(startDelay);
       }
     }
   }, [step, isTransitioning]);
@@ -358,26 +385,26 @@ export default function OnboardingPage() {
       case 3:
         setDataSources(localDataSources);
         break;
-      case 7:
+      case 8:
         setPriorities(localPriorities);
         break;
-      case 8:
+      case 9:
         if (localPastAttempt) setPastAttempt(localPastAttempt);
         break;
-      case 9:
+      case 10:
         setBarriers(localBarriers);
         break;
-      case 10:
+      case 11:
         if (localCoachingStyle) setCoachingStyle(localCoachingStyle);
         break;
-      case 11:
+      case 12:
         setConnectedApps(localConnectedApps);
         // Award points for connecting sources
         localConnectedApps.forEach(() => {
           addPoints('connect-source', POINTS_CONFIG.CONNECT_SOURCE, 'Connected health app');
         });
         break;
-      case 16:
+      case 17:
         // Complete onboarding - MUST await save before navigating
         if (isSaving) return; // Prevent double-submission
         setIsSaving(true);
@@ -407,9 +434,9 @@ export default function OnboardingPage() {
 
     // Calculate next step
     let nextStep = step + 1;
-    // Skip step 9 if user selected "not-really" for past attempts
-    if (step === 8 && localPastAttempt === 'not-really') {
-      nextStep = 10;
+    // Skip step 10 (barriers) if user selected "not-really" for past attempts
+    if (step === 9 && localPastAttempt === 'not-really') {
+      nextStep = 11;
     }
 
     // Transition
@@ -433,9 +460,9 @@ export default function OnboardingPage() {
     if (step === 1) return;
 
     let prevStep = step - 1;
-    // Skip step 9 going back if it was skipped going forward
-    if (step === 10 && (!localPastAttempt || localPastAttempt === 'not-really')) {
-      prevStep = 8;
+    // Skip step 10 (barriers) going back if it was skipped going forward
+    if (step === 11 && (!localPastAttempt || localPastAttempt === 'not-really')) {
+      prevStep = 9;
     }
 
     setIsTransitioning(true);
@@ -487,8 +514,8 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           userId: profile.id,
           // Custom redirect URLs for onboarding flow
-          successRedirectUrl: `${window.location.origin}/onboarding?terra=connected&step=11`,
-          failureRedirectUrl: `${window.location.origin}/onboarding?terra=failed&step=11`,
+          successRedirectUrl: `${window.location.origin}/onboarding?terra=connected&step=12`,
+          failureRedirectUrl: `${window.location.origin}/onboarding?terra=failed&step=12`,
         }),
       });
 
@@ -511,18 +538,18 @@ export default function OnboardingPage() {
     const terraStatus = params.get('terra');
     const stepParam = params.get('step');
 
-    if (terraStatus === 'connected' && stepParam === '11') {
+    if (terraStatus === 'connected' && stepParam === '12') {
       // Successfully connected - could fetch actual connected device
       // For now, just mark as having a connected device
       setTerraConnectedDevices(prev => [...prev, 'device']);
       // Clean up URL params
       window.history.replaceState({}, '', '/onboarding');
-      // Navigate to step 11
-      setStep(11);
-    } else if (terraStatus === 'failed' && stepParam === '11') {
+      // Navigate to step 12
+      setStep(12);
+    } else if (terraStatus === 'failed' && stepParam === '12') {
       // Connection failed - clean up URL
       window.history.replaceState({}, '', '/onboarding');
-      setStep(11);
+      setStep(12);
     }
   }, []);
 
@@ -642,12 +669,17 @@ export default function OnboardingPage() {
         {/* Step 1: Welcome */}
         {step === 1 && (
           <>
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
               <Message visible={messagesVisible >= 1} size="xl">
                 Hey.
               </Message>
-              <FadeIn visible={messagesVisible >= 1} delay={400} className="mt-4">
+              <FadeIn visible={messagesVisible >= 1} delay={1800} className="mt-4">
                 <p className="text-xl text-[#8A8580]">Let&apos;s build something together.</p>
+              </FadeIn>
+              <FadeIn visible={messagesVisible >= 1} delay={4000} className="mt-6 max-w-xs">
+                <p className="text-base text-[#8A8580] leading-relaxed">
+                  I&apos;ll give you one clear picture of your health data and help you make sense of it all. Over time, we&apos;ll grow together.
+                </p>
               </FadeIn>
             </div>
             <FadeIn visible={contentVisible}>
@@ -665,14 +697,22 @@ export default function OnboardingPage() {
               <Message visible={messagesVisible >= 1}>
                 First, what should I call you?
               </Message>
+              <FadeIn visible={messagesVisible >= 1} delay={600}>
+                <p className="text-sm text-[#B5AFA8] mt-2">I&apos;ll use this to personalize your experience.</p>
+              </FadeIn>
             </div>
             <FadeIn visible={contentVisible} className="mt-8">
               <Input
-                placeholder="Your name"
+                placeholder="First name works great"
                 value={localName}
                 onChange={(e) => setLocalName(e.target.value)}
                 autoFocus
               />
+              {localName.trim().length > 1 && (
+                <p className="text-center text-[#E07A5F] mt-4 animate-fade-in">
+                  Nice to meet you, {localName.trim()}.
+                </p>
+              )}
             </FadeIn>
             <div className="flex-1" />
             <FadeIn visible={contentVisible && localName.trim().length > 1} delay={100}>
@@ -732,7 +772,7 @@ export default function OnboardingPage() {
         {step === 4 && (
           <>
             <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-              {localDataSources.length >= 3 ? (
+              {localDataSources.length >= 2 ? (
                 <>
                   <Message visible={scatteredPhase >= 1} size="xl">
                     {localDataSources.length} sources of health data.
@@ -767,7 +807,7 @@ export default function OnboardingPage() {
             </div>
             <FadeIn visible={contentVisible}>
               <Button fullWidth size="lg" onClick={handleNext}>
-                {localDataSources.length >= 3 ? 'Change that' : "Let's build your picture"}
+                {localDataSources.length >= 2 ? 'Change that' : "Let's build your picture"}
               </Button>
             </FadeIn>
           </>
@@ -804,8 +844,48 @@ export default function OnboardingPage() {
           </>
         )}
 
-        {/* Step 6: Timeline Vision */}
+        {/* Step 6: Privacy & Security */}
         {step === 6 && (
+          <>
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
+              <FadeIn visible={messagesVisible >= 1} className="mb-6">
+                <div className="w-20 h-20 rounded-full bg-[#FFE8DC] flex items-center justify-center">
+                  <LucideIcons.Shield className="w-10 h-10 text-[#E07A5F]" />
+                </div>
+              </FadeIn>
+              <Message visible={messagesVisible >= 1} size="xl">
+                Your data. Your rules.
+              </Message>
+              <FadeIn visible={messagesVisible >= 2} delay={0} className="mt-4 max-w-xs">
+                <p className="text-base text-[#8A8580] leading-relaxed">
+                  Everything you share with yeww is encrypted and secure.
+                </p>
+              </FadeIn>
+              <FadeIn visible={messagesVisible >= 3} delay={0} className="mt-8 space-y-4 text-left max-w-xs">
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#E07A5F] mt-0.5 flex-shrink-0" />
+                  <p className="text-[#2D2A26]">Your raw data is never exposed — even when you share</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#E07A5F] mt-0.5 flex-shrink-0" />
+                  <p className="text-[#2D2A26]">You control exactly what gets shared</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#E07A5F] mt-0.5 flex-shrink-0" />
+                  <p className="text-[#2D2A26]">Earn Health Points when you contribute</p>
+                </div>
+              </FadeIn>
+            </div>
+            <FadeIn visible={contentVisible}>
+              <Button fullWidth size="lg" onClick={handleNext}>
+                Sounds good
+              </Button>
+            </FadeIn>
+          </>
+        )}
+
+        {/* Step 7: Timeline Vision */}
+        {step === 7 && (
           <>
             <div className="pt-4">
               <Message visible={messagesVisible >= 1}>
@@ -816,34 +896,34 @@ export default function OnboardingPage() {
               <div className="space-y-0">
                 <TimelineItem
                   label="Week 1"
-                  title="Getting to know you"
-                  description="I'll learn your basics — how you sleep, how you move, how you feel day to day."
+                  title="Learning your basics"
+                  description="I'll learn how you sleep, how you move, how you feel day to day."
                   visible={timelineItemsVisible >= 1}
                   delay={0}
                 />
                 <TimelineItem
-                  label="Month 1"
+                  label="Weeks 2-4"
                   title="Spotting patterns"
                   description="I'll start noticing things. Why Tuesdays are harder. What helps you sleep better."
                   visible={timelineItemsVisible >= 2}
                   delay={0}
                 />
                 <TimelineItem
-                  label="Month 6"
+                  label="Month 2"
                   title="Connecting the dots"
                   description="I'll understand how everything links — your stress, your sleep, your energy, your habits."
                   visible={timelineItemsVisible >= 3}
                   delay={0}
                 />
                 <TimelineItem
-                  label="Year 1"
+                  label="Months 3-4"
                   title="Your health story"
                   description="I'll know your rhythms, your triggers, your wins. I'll remind you how far you've come."
                   visible={timelineItemsVisible >= 4}
                   delay={0}
                 />
                 <TimelineItem
-                  label="Year 5+"
+                  label="Month 6"
                   title="Predicting, not just tracking"
                   description="I'll help you catch things early. See trends before they become problems."
                   visible={timelineItemsVisible >= 5}
@@ -860,7 +940,7 @@ export default function OnboardingPage() {
         )}
 
         {/* Step 7: Priorities */}
-        {step === 7 && (
+        {step === 8 && (
           <>
             <div className="pt-4 space-y-2">
               <Message visible={messagesVisible >= 1}>
@@ -883,9 +963,21 @@ export default function OnboardingPage() {
                 ))}
               </div>
               {localPriorities.length > 0 && (
-                <p className="text-[#8A8580] text-sm mt-4">
-                  {localPriorities.length}/3 selected
-                </p>
+                <div className="mt-6 animate-fade-in">
+                  <p className="text-lg text-[#2D2A26]">
+                    <span className="text-[#E07A5F] font-medium">
+                      {localPriorities.map((p, i) => {
+                        const priority = PRIORITIES.find(pr => pr.id === p);
+                        const name = priority?.name || p;
+                        if (i === 0) return name;
+                        if (i === localPriorities.length - 1) return ` and ${name}`;
+                        return `, ${name}`;
+                      }).join('')}
+                    </span>
+                    {` — got it. I'll start here, ${userName}.`}
+                  </p>
+                  <p className="text-[#B5AFA8] text-xs mt-2">{localPriorities.length}/3 selected</p>
+                </div>
               )}
             </FadeIn>
             <FadeIn visible={contentVisible && localPriorities.length > 0} delay={100}>
@@ -897,7 +989,7 @@ export default function OnboardingPage() {
         )}
 
         {/* Step 8: Past Attempts */}
-        {step === 8 && (
+        {step === 9 && (
           <>
             <div className="pt-4">
               <Message visible={messagesVisible >= 1}>
@@ -931,7 +1023,7 @@ export default function OnboardingPage() {
         )}
 
         {/* Step 9: Barriers (Conditional) */}
-        {step === 9 && (
+        {step === 10 && (
           <>
             <div className="pt-4 space-y-2">
               <Message visible={messagesVisible >= 1}>
@@ -972,7 +1064,7 @@ export default function OnboardingPage() {
         )}
 
         {/* Step 10: Coaching Style */}
-        {step === 10 && (
+        {step === 11 && (
           <>
             <div className="pt-4">
               <Message visible={messagesVisible >= 1}>
@@ -1001,6 +1093,20 @@ export default function OnboardingPage() {
                 </button>
               ))}
             </FadeIn>
+
+            {/* AI voice preview */}
+            {localCoachingStyle && (
+              <div className="mt-6 animate-fade-in">
+                <div className="bg-[#F5EDE4] rounded-2xl rounded-tl-sm p-4 max-w-[85%]">
+                  <p className="text-[#2D2A26]">
+                    {localCoachingStyle === 'direct' && "You've got gaps in your routine. Let's fix them."}
+                    {localCoachingStyle === 'supportive' && "You're already taking a great step by being here. Let's build on that together."}
+                    {localCoachingStyle === 'balanced' && "Good start. I'll push you when needed, support you when it counts."}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="flex-1" />
             <FadeIn visible={contentVisible && localCoachingStyle !== null} delay={100}>
               <Button fullWidth size="lg" onClick={handleNext}>
@@ -1011,11 +1117,11 @@ export default function OnboardingPage() {
         )}
 
         {/* Step 11: Connect Data */}
-        {step === 11 && (
+        {step === 12 && (
           <>
             <div className="pt-4 space-y-2">
               <Message visible={messagesVisible >= 1}>
-                Let&apos;s connect your wearables.
+                Let&apos;s connect your health data.
               </Message>
               <Message visible={messagesVisible >= 2} size="md">
                 The more I can see, the better I can help. You control what&apos;s shared.
@@ -1026,53 +1132,49 @@ export default function OnboardingPage() {
               {terraConnectedDevices.length > 0 && (
                 <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
                   <Check className="w-5 h-5 text-green-600" />
-                  <span className="text-green-700 font-medium">Device connected successfully!</span>
+                  <span className="text-green-700 font-medium">Connected successfully!</span>
                 </div>
               )}
 
-              {/* Supported devices preview with brand colors */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                {[
-                  { id: 'oura', name: 'Oura', emoji: '💍' },
-                  { id: 'whoop', name: 'Whoop', emoji: '⌚' },
-                  { id: 'garmin', name: 'Garmin', emoji: '⌚' },
-                  { id: 'fitbit', name: 'Fitbit', emoji: '📊' },
-                  { id: 'apple-health', name: 'Apple', emoji: '🍎' },
-                  { id: 'google-fit', name: 'Google', emoji: '📱' },
-                ].map((device) => {
-                  const brandColor = BRAND_COLORS[device.id];
-                  return (
-                    <div
-                      key={device.id}
-                      className="flex flex-col items-center p-3 rounded-xl bg-[#F5EDE4] border-2 border-transparent"
+              {/* Supported sources list */}
+              <div className="mb-6">
+                <p className="text-xs text-[#B5AFA8] uppercase tracking-wide mb-3">Supported sources</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'apple-health', name: 'Apple Health' },
+                    { id: 'oura', name: 'Oura' },
+                    { id: 'whoop', name: 'Whoop' },
+                    { id: 'garmin', name: 'Garmin' },
+                    { id: 'fitbit', name: 'Fitbit' },
+                    { id: 'strava', name: 'Strava' },
+                    { id: 'google-fit', name: 'Google Fit' },
+                  ].map((source) => (
+                    <span
+                      key={source.id}
+                      className="px-3 py-1.5 bg-[#F5EDE4] rounded-full text-sm text-[#8A8580]"
                     >
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${
-                        brandColor ? brandColor.iconBg : 'bg-gray-200'
-                      }`}>
-                        <span className="text-lg">{device.emoji}</span>
-                      </div>
-                      <span className="text-xs text-[#8A8580] font-medium">{device.name}</span>
-                    </div>
-                  );
-                })}
+                      {source.name}
+                    </span>
+                  ))}
+                  <span className="px-3 py-1.5 bg-[#F5EDE4] rounded-full text-sm text-[#8A8580]">
+                    + more
+                  </span>
+                </div>
               </div>
 
-              {/* Connect Device Button */}
+              {/* Connect Button */}
               <button
                 onClick={handleConnectDevice}
                 disabled={isConnectingTerra}
-                className="w-full p-4 rounded-2xl bg-white border-2 border-dashed border-[#E07A5F] flex items-center justify-center gap-3 transition-all duration-300 hover:bg-[#FFF5F2] active:scale-[0.98] disabled:opacity-50"
+                className="w-full p-4 rounded-2xl bg-[#E07A5F] text-white flex items-center justify-center gap-3 transition-all duration-300 hover:bg-[#D36B4F] active:scale-[0.98] disabled:opacity-50"
               >
                 {isConnectingTerra ? (
                   <>
-                    <Loader2 className="w-5 h-5 text-[#E07A5F] animate-spin" />
-                    <span className="font-medium text-[#E07A5F]">Connecting...</span>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="font-medium">Connecting...</span>
                   </>
                 ) : (
-                  <>
-                    <span className="text-2xl">+</span>
-                    <span className="font-medium text-[#E07A5F]">Connect a Device</span>
-                  </>
+                  <span className="font-medium">Connect a source</span>
                 )}
               </button>
 
@@ -1089,102 +1191,192 @@ export default function OnboardingPage() {
         )}
 
         {/* Step 12: Health Score Reveal */}
-        {step === 12 && (
+        {step === 13 && (
           <>
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <Message visible={messagesVisible >= 1}>
-                Here&apos;s where you&apos;re starting.
-              </Message>
-              <FadeIn visible={messagesVisible >= 2} delay={400} className="mt-8">
-                <HealthScoreGauge score={estimatedHealthScore} size="lg" animated />
-              </FadeIn>
-              <FadeIn visible={contentVisible} delay={200} className="mt-4">
-                <p className="text-sm text-[#8A8580]">Your Health Score</p>
-                <p className="text-xs text-[#8A8580] mt-2 max-w-xs">
-                  One number that captures the full picture. This will get more accurate as I learn you.
-                </p>
-              </FadeIn>
-            </div>
-            <FadeIn visible={contentVisible} delay={300}>
-              <Button fullWidth size="lg" onClick={handleNext}>
-                See how to improve
-              </Button>
-            </FadeIn>
+            {terraConnectedDevices.length > 0 ? (
+              // Connected: Show actual score
+              <>
+                <div className="flex-1 flex flex-col items-center justify-center text-center">
+                  <Message visible={messagesVisible >= 1}>
+                    Here&apos;s where you&apos;re starting.
+                  </Message>
+                  <FadeIn visible={messagesVisible >= 2} delay={400} className="mt-8">
+                    <HealthScoreGauge score={estimatedHealthScore} size="lg" animated />
+                  </FadeIn>
+                  <FadeIn visible={contentVisible} delay={200} className="mt-4">
+                    <p className="text-sm text-[#8A8580]">Your Health Score</p>
+                    <p className="text-xs text-[#8A8580] mt-2 max-w-xs">
+                      Based on your connected data. This will get more accurate as I learn you.
+                    </p>
+                  </FadeIn>
+                </div>
+                <FadeIn visible={contentVisible} delay={300}>
+                  <Button fullWidth size="lg" onClick={handleNext}>
+                    See how to improve
+                  </Button>
+                </FadeIn>
+              </>
+            ) : (
+              // Not connected: Show placeholder
+              <>
+                <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
+                  <Message visible={messagesVisible >= 1}>
+                    Your Health Score
+                  </Message>
+                  <FadeIn visible={messagesVisible >= 2} delay={400} className="mt-8">
+                    <div className="w-32 h-32 rounded-full border-4 border-dashed border-[#E5DED5] flex items-center justify-center">
+                      <span className="text-5xl text-[#B5AFA8]">?</span>
+                    </div>
+                  </FadeIn>
+                  <FadeIn visible={contentVisible} delay={200} className="mt-6">
+                    <p className="text-lg text-[#2D2A26]">I don&apos;t have enough data yet.</p>
+                    <p className="text-sm text-[#8A8580] mt-2 max-w-xs">
+                      Connect a health source to unlock your score. The more I see, the more accurate it gets.
+                    </p>
+                  </FadeIn>
+                </div>
+                <FadeIn visible={contentVisible} delay={300} className="space-y-3">
+                  <Button fullWidth size="lg" onClick={() => setStep(12)}>
+                    Connect now
+                  </Button>
+                  <Button fullWidth size="lg" variant="secondary" onClick={handleNext}>
+                    I&apos;ll do this later
+                  </Button>
+                </FadeIn>
+              </>
+            )}
           </>
         )}
 
         {/* Step 13: Reputation Score */}
-        {step === 13 && (
+        {step === 14 && (
           <>
             <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
               <Message visible={messagesVisible >= 1}>
-                One more thing.
+                Everyone starts here.
               </Message>
               <FadeIn visible={messagesVisible >= 2} delay={400} className="mt-6">
-                <div className="bg-[#F5EDE4] rounded-2xl p-6 inline-block">
-                  <ReputationBadge level="starter" size="lg" />
+                {/* Current level - highlighted */}
+                <div className="bg-[#F5EDE4] rounded-2xl p-5 inline-block">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#8A8580]/10 flex items-center justify-center">
+                      <LucideIcons.Star className="w-5 h-5 text-[#8A8580]" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-[#2D2A26]">Starter</p>
+                      <p className="text-xs text-[#8A8580]">Your journey begins</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Progression path */}
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#8A8580]" />
+                  <div className="w-6 h-px bg-[#E5DED5]" />
+                  <div className="w-2 h-2 rounded-full bg-[#E5DED5]" title="Regular" />
+                  <div className="w-6 h-px bg-[#E5DED5]" />
+                  <div className="w-2 h-2 rounded-full bg-[#E5DED5]" title="Trusted" />
+                  <div className="w-6 h-px bg-[#E5DED5]" />
+                  <div className="w-2 h-2 rounded-full bg-[#E5DED5]" title="Verified" />
+                  <div className="w-6 h-px bg-[#E5DED5]" />
+                  <LucideIcons.Crown className="w-4 h-4 text-[#E5DED5]" />
                 </div>
               </FadeIn>
-              <FadeIn visible={contentVisible} delay={0} className="mt-4">
-                <p className="text-lg font-semibold text-[#2D2A26]">Your Reputation Score</p>
+              <FadeIn visible={contentVisible} delay={0} className="mt-6">
+                <p className="text-lg font-semibold text-[#2D2A26]">This is how well I know you.</p>
                 <p className="text-sm text-[#8A8580] mt-2 max-w-xs">
-                  This measures how well I know you. The more you share, the more accurate my advice gets.
+                  The more you share — securely — the better my advice becomes.
                 </p>
               </FadeIn>
-              <FadeIn visible={contentVisible} delay={200} className="mt-6 space-y-2 text-sm text-left max-w-xs">
-                <p className="text-[#2D2A26]">Check in regularly = better advice</p>
-                <p className="text-[#2D2A26]">Connect more data = clearer picture</p>
-                <p className="text-[#2D2A26]">Be consistent = smarter insights</p>
+              <FadeIn visible={contentVisible} delay={200} className="mt-5 space-y-3 text-sm text-left max-w-xs">
+                <div className="flex items-start gap-2">
+                  <LucideIcons.MessageCircle className="w-4 h-4 text-[#E07A5F] mt-0.5 flex-shrink-0" />
+                  <p className="text-[#2D2A26]">Check in regularly for personalized advice</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <LucideIcons.Link className="w-4 h-4 text-[#E07A5F] mt-0.5 flex-shrink-0" />
+                  <p className="text-[#2D2A26]">Connect data sources for a clearer picture</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <LucideIcons.TrendingUp className="w-4 h-4 text-[#E07A5F] mt-0.5 flex-shrink-0" />
+                  <p className="text-[#2D2A26]">Stay consistent to unlock smarter insights</p>
+                </div>
               </FadeIn>
             </div>
             <FadeIn visible={contentVisible} delay={300}>
               <Button fullWidth size="lg" onClick={handleNext}>
-                Got it
+                Let&apos;s grow it
               </Button>
             </FadeIn>
           </>
         )}
 
         {/* Step 14: Points Preview */}
-        {step === 14 && (
+        {step === 15 && (
           <>
             <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
               <Message visible={messagesVisible >= 1}>
-                One more thing — Health Points.
+                Meet Health Points.
               </Message>
               <FadeIn visible={messagesVisible >= 2} delay={400} className="mt-6">
-                <div className="bg-[#F5EDE4] rounded-2xl p-6 inline-block">
-                  <PointsDisplay points={0} size="lg" showLabel />
+                <div className="bg-[#F5EDE4] rounded-2xl p-6 inline-block relative">
+                  {/* Animated points display */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#E07A5F] to-[#D36B4F] flex items-center justify-center">
+                      <LucideIcons.Coins className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-3xl font-bold text-[#2D2A26] tabular-nums">{animatedPoints}</p>
+                      <p className="text-xs text-[#8A8580]">Health Points</p>
+                    </div>
+                  </div>
+                  {/* Welcome bonus badge */}
+                  {animatedPoints >= 100 && (
+                    <div className="absolute -top-2 -right-2 bg-[#4ADE80] text-white text-xs font-medium px-2 py-0.5 rounded-full animate-fade-in">
+                      Welcome bonus!
+                    </div>
+                  )}
                 </div>
               </FadeIn>
-              <FadeIn visible={contentVisible} delay={0} className="mt-4">
-                <p className="text-lg font-semibold text-[#2D2A26]">Simple rewards for showing up.</p>
+              <FadeIn visible={contentVisible} delay={0} className="mt-5">
+                <p className="text-lg font-semibold text-[#2D2A26]">Earn points. Unlock real rewards.</p>
               </FadeIn>
-              <FadeIn visible={contentVisible} delay={200} className="mt-6 space-y-2 text-sm text-left max-w-xs">
-                <p className="text-[#2D2A26]">Check in daily: +{POINTS_CONFIG.CHECK_IN} points</p>
-                <p className="text-[#2D2A26]">Connect health apps: +{POINTS_CONFIG.CONNECT_SOURCE} points</p>
-                <p className="text-[#2D2A26]">Build streaks: bonus points</p>
+              <FadeIn visible={contentVisible} delay={200} className="mt-5 space-y-3 text-sm text-left max-w-xs">
+                <div className="flex items-start gap-2">
+                  <LucideIcons.CalendarCheck className="w-4 h-4 text-[#E07A5F] mt-0.5 flex-shrink-0" />
+                  <p className="text-[#2D2A26]">Check in daily: <span className="font-medium">+{POINTS_CONFIG.CHECK_IN} pts</span></p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <LucideIcons.Activity className="w-4 h-4 text-[#E07A5F] mt-0.5 flex-shrink-0" />
+                  <p className="text-[#2D2A26]">Connect health data: <span className="font-medium">+{POINTS_CONFIG.CONNECT_SOURCE} pts</span></p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <LucideIcons.Flame className="w-4 h-4 text-[#E07A5F] mt-0.5 flex-shrink-0" />
+                  <p className="text-[#2D2A26]">Build streaks: <span className="font-medium">bonus pts</span></p>
+                </div>
               </FadeIn>
-              <FadeIn visible={contentVisible} delay={400} className="mt-4">
-                <p className="text-xs text-[#8A8580] max-w-xs">
-                  Points will unlock rewards as yeww grows. For now, just watch them stack up.
-                </p>
+              <FadeIn visible={contentVisible} delay={400} className="mt-5">
+                <div className="bg-[#FAF6F1] border border-[#F5EDE4] rounded-xl p-4 max-w-xs">
+                  <p className="text-sm text-[#2D2A26] font-medium">Redeem for real rewards</p>
+                  <p className="text-xs text-[#8A8580] mt-1">
+                    Airline miles, hotel stays, wellness products, and exclusive offers — all from taking care of yourself.
+                  </p>
+                </div>
               </FadeIn>
             </div>
             <FadeIn visible={contentVisible} delay={500}>
               <Button fullWidth size="lg" onClick={handleNext}>
-                Nice
+                Love it
               </Button>
             </FadeIn>
           </>
         )}
 
         {/* Step 15: Commitment Moment */}
-        {step === 15 && (
+        {step === 16 && (
           <>
             <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
               <Message visible={messagesVisible >= 1} size="xl">
-                Ready to start?
+                Ready, {userName}?
               </Message>
               <FadeIn visible={messagesVisible >= 2} delay={400} className="mt-6 max-w-xs">
                 <p className="text-base text-[#8A8580]">
@@ -1201,7 +1393,7 @@ export default function OnboardingPage() {
         )}
 
         {/* Step 16: AI Introduction */}
-        {step === 16 && (
+        {step === 17 && (
           <>
             <div className="flex-1 flex flex-col pt-8">
               <div className="space-y-4">
@@ -1271,13 +1463,10 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            {/* Quick action buttons */}
-            <FadeIn visible={aiMessagesVisible >= 4} delay={500} className="space-y-3">
-              <Button fullWidth size="lg" onClick={handleCheckInNow} disabled={isSaving} glow>
-                {isSaving ? 'Setting up...' : 'Check in now'}
-              </Button>
-              <Button fullWidth size="lg" variant="secondary" onClick={handleExploreApp} disabled={isSaving}>
-                Explore the app
+            {/* Single action button */}
+            <FadeIn visible={aiMessagesVisible >= 4} delay={500}>
+              <Button fullWidth size="lg" onClick={handleNext} disabled={isSaving} glow>
+                {isSaving ? 'Setting up...' : "Let's go"}
               </Button>
             </FadeIn>
           </>
