@@ -128,7 +128,7 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
       }
     }
 
-    // Process recovery/strain if available (Whoop, Oura)
+    // Process recovery/strain if available (Whoop, Oura, Garmin)
     if (latestByType['body']) {
       const bodyData = latestByType['body'].data as {
         recovery_data?: { recovery_score?: number };
@@ -140,6 +140,39 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
         metrics.recovery = {
           score: Math.round(score),
           status: score >= 67 ? 'high' : score >= 34 ? 'moderate' : 'low',
+        };
+      }
+    }
+
+    // Process Garmin-specific data (Body Battery, Stress)
+    if (latestByType['daily']) {
+      const dailyData = latestByType['daily'].data as {
+        stress_data?: {
+          avg_stress_level?: number;
+          body_battery_samples?: { level?: number; timestamp?: string }[];
+        };
+      };
+
+      // Garmin Body Battery as recovery score (0-100, higher is better)
+      if (dailyData?.stress_data?.body_battery_samples?.length) {
+        const samples = dailyData.stress_data.body_battery_samples;
+        // Get the most recent body battery reading
+        const latestSample = samples[samples.length - 1];
+        if (latestSample?.level && !metrics.recovery) {
+          metrics.recovery = {
+            score: latestSample.level,
+            status: latestSample.level >= 67 ? 'high' : latestSample.level >= 34 ? 'moderate' : 'low',
+          };
+        }
+      }
+
+      // Garmin stress level as strain (0-100, lower is calmer)
+      // Invert it so higher = more strain (consistent with Whoop)
+      if (dailyData?.stress_data?.avg_stress_level != null && !metrics.strain) {
+        const stressLevel = dailyData.stress_data.avg_stress_level;
+        metrics.strain = {
+          yesterday: stressLevel,
+          weeklyAvg: stressLevel,
         };
       }
     }
