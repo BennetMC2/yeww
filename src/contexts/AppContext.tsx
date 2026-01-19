@@ -44,6 +44,7 @@ import {
   POINTS_CONFIG,
   calculateStreakBonus,
 } from '@/lib/scores';
+import { getLatestHealthMetrics } from '@/lib/healthData';
 
 interface AppContextType {
   // User Profile
@@ -70,7 +71,7 @@ interface AppContextType {
   setSharingPreference: (key: keyof SharingPreferences, value: boolean) => void;
 
   // Scores
-  recalculateScores: () => void;
+  recalculateScores: () => Promise<void>;
 
   // Conversations
   conversations: ConversationHistory;
@@ -234,26 +235,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSharingPreferenceStorage(key, value).then(setProfile);
   }, []);
 
-  // Recalculate scores
-  const recalculateScores = useCallback(() => {
-    setProfile(prev => {
-      if (!prev) return prev;
+  // Recalculate scores (fetches real health metrics for accurate scoring)
+  const recalculateScores = useCallback(async () => {
+    if (!profile) return;
 
-      const healthScore = calculateHealthScore(prev);
-      const reputationPoints = calculateReputationPoints(prev);
-      const reputationLevel = calculateReputationLevel(reputationPoints);
+    // Fetch real health metrics from Terra data
+    const metrics = await getLatestHealthMetrics(profile.id);
 
-      const updated = {
-        ...prev,
-        healthScore,
-        reputationPoints,
-        reputationLevel,
-      };
+    const healthScore = calculateHealthScore(profile, metrics);
+    const reputationPoints = calculateReputationPoints(profile, metrics);
+    const reputationLevel = calculateReputationLevel(reputationPoints);
 
-      saveUserProfile(updated);
-      return updated;
-    });
-  }, []);
+    const updated = {
+      ...profile,
+      healthScore,
+      reputationPoints,
+      reputationLevel,
+    };
+
+    setProfile(updated);
+    await saveUserProfile(updated);
+  }, [profile]);
 
   const addMessage = useCallback(async (role: 'assistant' | 'user', content: string, options?: { quickActions?: { label: string; value: string }[]; images?: MessageImage[] }) => {
     const message = await addMessageToStorage(role, content, options);

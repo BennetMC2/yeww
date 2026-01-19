@@ -1,11 +1,11 @@
-import { UserProfile, ReputationLevel, REPUTATION_THRESHOLDS } from '@/types';
+import { UserProfile, ReputationLevel, REPUTATION_THRESHOLDS, HealthMetrics } from '@/types';
 
 // Re-export for convenience
 export { REPUTATION_THRESHOLDS };
 
 // ============ Health Score Calculation ============
 // 0-100 scale based on:
-// - Wearable data (40%): connected data sources
+// - Wearable data (40%): actual health metrics quality (or connected sources as fallback)
 // - Self-reported (30%): check-in frequency
 // - Consistency (20%): streak
 // - Coverage (10%): health areas tracked
@@ -14,13 +14,54 @@ const WEARABLE_SOURCES = [
   'apple-health', 'google-fit', 'oura', 'whoop', 'garmin', 'fitbit'
 ] as const;
 
-export function calculateHealthScore(profile: UserProfile): number {
-  // Wearable score (40%) - based on connected data sources
-  const connectedWearables = profile.dataSources.filter(s =>
-    WEARABLE_SOURCES.includes(s as typeof WEARABLE_SOURCES[number])
-  );
-  // Max out at 3 wearables connected
-  const wearableScore = Math.min(100, (connectedWearables.length / 3) * 100);
+export function calculateHealthScore(profile: UserProfile, metrics?: HealthMetrics | null): number {
+  let wearableScore = 0;
+
+  // If we have real metrics, score based on data quality
+  if (metrics && Object.keys(metrics).length > 0) {
+    let metricPoints = 0;
+
+    // Sleep: good/excellent quality = 25 points
+    if (metrics.sleep) {
+      if (metrics.sleep.quality === 'excellent' || metrics.sleep.quality === 'good') {
+        metricPoints += 25;
+      } else if (metrics.sleep.lastNightHours >= 6) {
+        metricPoints += 15; // Decent sleep hours even if quality not great
+      }
+    }
+
+    // Recovery: score >= 50 = 25 points
+    if (metrics.recovery) {
+      if (metrics.recovery.score >= 50) {
+        metricPoints += 25;
+      } else {
+        metricPoints += 10; // At least we have data
+      }
+    }
+
+    // Steps: >= 5000 = 25 points
+    if (metrics.steps) {
+      if (metrics.steps.today >= 5000) {
+        metricPoints += 25;
+      } else if (metrics.steps.today >= 2000) {
+        metricPoints += 15;
+      }
+    }
+
+    // HRV or RHR data = 25 points (just having it is good)
+    if (metrics.hrv || metrics.rhr) {
+      metricPoints += 25;
+    }
+
+    wearableScore = Math.min(100, metricPoints);
+  } else {
+    // Fallback: count connected wearable sources
+    const connectedWearables = profile.dataSources.filter(s =>
+      WEARABLE_SOURCES.includes(s as typeof WEARABLE_SOURCES[number])
+    );
+    // Max out at 3 wearables connected
+    wearableScore = Math.min(100, (connectedWearables.length / 3) * 100);
+  }
 
   // Self-reported score (30%) - based on check-in history
   // Start with base 20 for completing onboarding
@@ -73,7 +114,7 @@ export function getHealthScoreLabel(score: number): string {
 // - History length (15%): days since joined
 // - Cross-validation (10%): health areas tracking
 
-export function calculateReputationPoints(profile: UserProfile): number {
+export function calculateReputationPoints(profile: UserProfile, metrics?: HealthMetrics | null): number {
   // Calculate days since creation
   const daysSinceCreation = Math.floor(
     (Date.now() - new Date(profile.createdAt).getTime()) / (1000 * 60 * 60 * 24)
@@ -99,7 +140,35 @@ export function calculateReputationPoints(profile: UserProfile): number {
   // Cross-validation: health areas (max 10 points)
   const crossValidationPoints = Math.min(10, profile.healthAreas.length * 2);
 
-  return consistencyPoints + verificationPoints + completenessPoints + historyPoints + crossValidationPoints;
+  // Data quality bonus (max 15 points) - reward users with real, verified data
+  let dataQualityPoints = 0;
+  if (metrics && Object.keys(metrics).length > 0) {
+    // Has any real data = 5 points
+    dataQualityPoints += 5;
+
+    // Has 3+ different metric types = 5 points
+    const metricCount = [
+      metrics.sleep,
+      metrics.hrv,
+      metrics.rhr,
+      metrics.steps,
+      metrics.recovery,
+      metrics.strain,
+    ].filter(Boolean).length;
+    if (metricCount >= 3) {
+      dataQualityPoints += 5;
+    }
+
+    // Has good quality data = 5 points
+    const hasGoodData =
+      (metrics.sleep && (metrics.sleep.quality === 'good' || metrics.sleep.quality === 'excellent')) ||
+      (metrics.recovery && metrics.recovery.score >= 50);
+    if (hasGoodData) {
+      dataQualityPoints += 5;
+    }
+  }
+
+  return consistencyPoints + verificationPoints + completenessPoints + historyPoints + crossValidationPoints + dataQualityPoints;
 }
 
 export function calculateReputationLevel(points: number): ReputationLevel {
