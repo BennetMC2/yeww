@@ -22,14 +22,11 @@ export default function ProfilePage() {
   const [showPointsHistory, setShowPointsHistory] = useState(false);
 
   // Redirect to onboarding if not completed
-  // TEMPORARILY DISABLED for Terra testing
-  // useEffect(() => {
-  //   const params = new URLSearchParams(window.location.search);
-  //   const skip = params.get('skip') === '1';
-  //   if (!isLoading && !profile?.onboardingCompleted && !skip) {
-  //     router.replace('/onboarding');
-  //   }
-  // }, [isLoading, profile, router]);
+  useEffect(() => {
+    if (!isLoading && !profile?.onboardingCompleted) {
+      router.replace('/onboarding');
+    }
+  }, [isLoading, profile, router]);
 
   useEffect(() => {
     if (profile) {
@@ -37,8 +34,7 @@ export default function ProfilePage() {
     }
   }, [profile]);
 
-  // TEMPORARILY DISABLED onboarding check for Terra testing
-  if (isLoading) {
+  if (isLoading || !profile?.onboardingCompleted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAF6F1]">
         <p className="text-[#B5AFA8]">Loading...</p>
@@ -46,7 +42,7 @@ export default function ProfilePage() {
     );
   }
 
-  // After this point, profile is guaranteed to exist (or we show empty state)
+  // After this point, profile is guaranteed to exist
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAF6F1]">

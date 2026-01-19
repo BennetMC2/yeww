@@ -191,6 +191,13 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 }
 
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
+  // ALWAYS store locally FIRST for offline resilience
+  // This ensures the profile persists even if Supabase save is slow or fails
+  setLocalUserId(profile.id);
+  if (isBrowser) {
+    localStorage.setItem('yeww_profile_fallback', JSON.stringify(profile));
+  }
+
   try {
     const dbUser = profileToDbUser(profile);
 
@@ -200,28 +207,17 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
 
     if (error) {
       console.error('Error saving user profile to Supabase:', error.message || error);
-      // Still store user ID locally so app works offline
-      setLocalUserId(profile.id);
-      // Fallback: store profile in localStorage
-      if (isBrowser) {
-        localStorage.setItem('yeww_profile_fallback', JSON.stringify(profile));
-      }
+      // Profile is already saved to localStorage, so app continues to work
       return;
     }
 
-    // Store user ID locally for future sessions
-    setLocalUserId(profile.id);
-    // Clear fallback if save succeeded
+    // Success - clear fallback since Supabase has the data
     if (isBrowser) {
       localStorage.removeItem('yeww_profile_fallback');
     }
   } catch (error) {
     console.error('Error saving user profile:', error);
-    // Still store user ID locally so app works
-    setLocalUserId(profile.id);
-    if (isBrowser) {
-      localStorage.setItem('yeww_profile_fallback', JSON.stringify(profile));
-    }
+    // Profile is already saved to localStorage, so app continues to work
   }
 }
 

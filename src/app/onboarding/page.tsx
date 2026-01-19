@@ -204,6 +204,7 @@ export default function OnboardingPage() {
   const [timelineItemsVisible, setTimelineItemsVisible] = useState(0);
   const [scatteredPhase, setScatteredPhase] = useState(0);
   const [aiMessagesVisible, setAiMessagesVisible] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Total steps (accounting for conditional step 9)
   const shouldShowBarriers = localPastAttempt && localPastAttempt !== 'not-really';
@@ -300,7 +301,7 @@ export default function OnboardingPage() {
     }
   }, [step, isTransitioning]);
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     // Save data based on step
     switch (step) {
       case 2:
@@ -329,11 +330,23 @@ export default function OnboardingPage() {
         });
         break;
       case 16:
-        // Complete onboarding
-        addPoints('complete-onboarding', POINTS_CONFIG.COMPLETE_ONBOARDING, 'Completed onboarding');
-        recalculateScores();
-        completeOnboarding();
-        router.push('/home');
+        // Complete onboarding - MUST await save before navigating
+        if (isSaving) return; // Prevent double-submission
+        setIsSaving(true);
+
+        try {
+          // These can be fire-and-forget (non-critical for navigation)
+          addPoints('complete-onboarding', POINTS_CONFIG.COMPLETE_ONBOARDING, 'Completed onboarding');
+          recalculateScores();
+
+          // MUST await - profile must be saved before navigation
+          await completeOnboarding();
+
+          router.push('/home');
+        } catch (error) {
+          console.error('Error completing onboarding:', error);
+          setIsSaving(false); // Allow retry
+        }
         return;
     }
 
@@ -358,7 +371,7 @@ export default function OnboardingPage() {
     localBarriers, localCoachingStyle, localConnectedApps,
     setName, setDataSources, setPriorities, setPastAttempt, setBarriers,
     setCoachingStyle, setConnectedApps, addPoints, recalculateScores,
-    completeOnboarding, router
+    completeOnboarding, router, isSaving
   ]);
 
   const handleBack = () => {
@@ -1052,8 +1065,8 @@ export default function OnboardingPage() {
               </div>
             </div>
             <FadeIn visible={aiMessagesVisible >= 4} delay={500}>
-              <Button fullWidth size="lg" onClick={handleNext}>
-                Start my journey
+              <Button fullWidth size="lg" onClick={handleNext} disabled={isSaving}>
+                {isSaving ? 'Setting up...' : 'Start my journey'}
               </Button>
             </FadeIn>
           </>

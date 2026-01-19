@@ -52,7 +52,7 @@ interface AppContextType {
   setName: (name: string) => void;
   setCoachingStyle: (style: CoachingStyle) => void;
   setConnectedApps: (apps: ConnectedApp[]) => void;
-  completeOnboarding: () => void;
+  completeOnboarding: () => Promise<void>;
   addHealthArea: (areaId: string, areaName: string) => void;
   removeHealthArea: (areaId: string) => void;
   recordCheckIn: () => void;
@@ -156,18 +156,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const completeOnboarding = useCallback(() => {
-    setProfile(prev => {
-      if (!prev) return prev;
-      const updated = { ...prev, onboardingCompleted: true };
-      saveUserProfile(updated);
-      // Add milestone
-      addMilestoneStorage('Started health journey with yeww').then(() => {
-        getProgressData().then(setProgress);
-      });
-      return updated;
+  const completeOnboarding = useCallback(async (): Promise<void> => {
+    if (!profile) return;
+
+    const updated = { ...profile, onboardingCompleted: true };
+
+    // Update local state immediately for responsive UI
+    setProfile(updated);
+
+    // AWAIT the save - this ensures profile is persisted before navigation
+    await saveUserProfile(updated);
+
+    // Add milestone (fire-and-forget, not critical for navigation)
+    addMilestoneStorage('Started health journey with yeww').then(() => {
+      getProgressData().then(setProgress);
     });
-  }, []);
+  }, [profile]);
 
   const addHealthArea = useCallback((areaId: string, areaName: string) => {
     addHealthAreaStorage(areaId, areaName).then(updatedProfile => {
