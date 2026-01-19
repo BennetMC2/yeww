@@ -26,6 +26,13 @@
   /* Shadows - warmer */
   --shadow-soft: 0 2px 16px rgba(45, 42, 38, 0.06);
   --shadow-medium: 0 4px 24px rgba(45, 42, 38, 0.08);
+
+  /* Brand colors for data sources */
+  --brand-apple-health: linear-gradient(135deg, #FF6B6B 0%, #FF3B30 100%);
+  --brand-oura: linear-gradient(135deg, #D4D4D4 0%, #9CA3AF 100%);
+  --brand-whoop: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%);
+  --brand-garmin: linear-gradient(135deg, #60A5FA 0%, #2563EB 100%);
+  --brand-fitbit: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%);
 }
 
 @theme inline {
@@ -160,4 +167,93 @@ body {
 ::selection {
   background: var(--accent-primary-light);
   color: var(--foreground);
+}
+
+/* Skeleton loading animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--background-secondary) 25%,
+    var(--background) 50%,
+    var(--background-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+  border-radius: 8px;
+}
+
+/* Glow animation for buttons */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(224, 122, 95, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(224, 122, 95, 0.5);
+  }
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Confetti animation keyframes */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(15px);
+  }
+  75% {
+    transform: translateX(-15px);
+  }
+}
+
+.confetti-piece {
+  position: fixed;
+  top: -10px;
+  animation: confetti-fall 3s linear forwards, confetti-shake 0.5s ease-in-out infinite;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--background-secondary);
+  }
+
+  .animate-glow {
+    animation: none;
+    box-shadow: 0 0 12px rgba(224, 122, 95, 0.4);
+  }
+
+  .confetti-piece {
+    animation: none;
+    display: none;
+  }
+
+  .animate-pulse,
+  .animate-pulse-slow {
+    animation: none;
+  }
 }

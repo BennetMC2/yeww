@@ -3,7 +3,8 @@ import { generateWidgetSession } from '@/lib/terra';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await request.json();
+    const body = await request.json();
+    const { userId, successRedirectUrl: customSuccessUrl, failureRedirectUrl: customFailureUrl } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -13,8 +14,8 @@ export async function POST(request: NextRequest) {
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const successRedirectUrl = `${appUrl}/profile?terra=connected&skip=1`;
-    const failureRedirectUrl = `${appUrl}/profile?terra=failed&skip=1`;
+    const successRedirectUrl = customSuccessUrl || `${appUrl}/profile?terra=connected&skip=1`;
+    const failureRedirectUrl = customFailureUrl || `${appUrl}/profile?terra=failed&skip=1`;
 
     const session = await generateWidgetSession(
       userId,

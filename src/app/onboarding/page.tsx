@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Check, Sparkles } from 'lucide-react';
+import { ChevronLeft, Check, Sparkles, Loader2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { Button, Input, ProgressBar } from '@/components/ui';
+import { Button, Input, ProgressBar, Confetti } from '@/components/ui';
 import { useApp } from '@/contexts/AppContext';
 import HealthScoreGauge from '@/components/scores/HealthScoreGauge';
 import ReputationBadge from '@/components/scores/ReputationBadge';
@@ -76,7 +76,47 @@ const FadeIn = ({
   </div>
 );
 
-// Data source card with icon
+// Brand colors for data sources
+const BRAND_COLORS: Record<string, { gradient: string; iconBg: string }> = {
+  'apple-health': {
+    gradient: 'from-red-400 to-red-500',
+    iconBg: 'bg-gradient-to-br from-red-400 to-red-500',
+  },
+  'oura': {
+    gradient: 'from-gray-300 to-gray-400',
+    iconBg: 'bg-gradient-to-br from-gray-300 to-gray-400',
+  },
+  'whoop': {
+    gradient: 'from-blue-400 to-blue-600',
+    iconBg: 'bg-gradient-to-br from-blue-400 to-blue-600',
+  },
+  'garmin': {
+    gradient: 'from-blue-300 to-blue-500',
+    iconBg: 'bg-gradient-to-br from-blue-300 to-blue-500',
+  },
+  'fitbit': {
+    gradient: 'from-teal-400 to-teal-500',
+    iconBg: 'bg-gradient-to-br from-teal-400 to-teal-500',
+  },
+  'google-fit': {
+    gradient: 'from-green-400 to-blue-400',
+    iconBg: 'bg-gradient-to-br from-green-400 to-blue-400',
+  },
+  'strava': {
+    gradient: 'from-orange-400 to-orange-500',
+    iconBg: 'bg-gradient-to-br from-orange-400 to-orange-500',
+  },
+  'peloton': {
+    gradient: 'from-red-500 to-red-600',
+    iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
+  },
+  'withings': {
+    gradient: 'from-blue-400 to-cyan-400',
+    iconBg: 'bg-gradient-to-br from-blue-400 to-cyan-400',
+  },
+};
+
+// Data source card with icon and brand colors
 const DataSourceCard = ({
   source,
   selected,
@@ -87,17 +127,22 @@ const DataSourceCard = ({
   onClick: () => void;
 }) => {
   const IconComponent = (LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[source.icon] || LucideIcons.Circle;
+  const brandColor = BRAND_COLORS[source.id];
 
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 min-h-[80px] ${
+      className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 min-h-[80px] active:scale-[0.97] ${
         selected
-          ? 'border-[#E07A5F] bg-[#FFE8DC]'
-          : 'border-[#F5EDE4] bg-white hover:border-[#E07A5F]/50'
+          ? 'border-[#E07A5F] bg-[#FFE8DC] shadow-md'
+          : 'border-[#F5EDE4] bg-white hover:border-[#E07A5F]/50 hover:shadow-sm'
       }`}
     >
-      <IconComponent className={`w-6 h-6 mb-1.5 ${selected ? 'text-[#E07A5F]' : 'text-[#8A8580]'}`} />
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-1.5 ${
+        brandColor ? brandColor.iconBg : 'bg-[#F5EDE4]'
+      }`}>
+        <IconComponent className={`w-4 h-4 ${brandColor ? 'text-white' : selected ? 'text-[#E07A5F]' : 'text-[#8A8580]'}`} />
+      </div>
       <span className={`text-xs font-medium text-center leading-tight ${selected ? 'text-[#2D2A26]' : 'text-[#8A8580]'}`}>
         {source.name}
       </span>
@@ -205,6 +250,9 @@ export default function OnboardingPage() {
   const [scatteredPhase, setScatteredPhase] = useState(0);
   const [aiMessagesVisible, setAiMessagesVisible] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [isConnectingTerra, setIsConnectingTerra] = useState(false);
+  const [terraConnectedDevices, setTerraConnectedDevices] = useState<string[]>([]);
 
   // Total steps (accounting for conditional step 9)
   const shouldShowBarriers = localPastAttempt && localPastAttempt !== 'not-really';
@@ -339,13 +387,20 @@ export default function OnboardingPage() {
           addPoints('complete-onboarding', POINTS_CONFIG.COMPLETE_ONBOARDING, 'Completed onboarding');
           recalculateScores();
 
+          // Trigger confetti celebration
+          setShowConfetti(true);
+
           // MUST await - profile must be saved before navigation
           await completeOnboarding();
 
-          router.push('/home');
+          // Small delay to let confetti play before navigation
+          setTimeout(() => {
+            router.push('/home');
+          }, 800);
         } catch (error) {
           console.error('Error completing onboarding:', error);
           setIsSaving(false); // Allow retry
+          setShowConfetti(false);
         }
         return;
     }
@@ -419,10 +474,82 @@ export default function OnboardingPage() {
     );
   };
 
+  // Handle Terra device connection
+  const handleConnectDevice = async () => {
+    if (!profile?.id || isConnectingTerra) return;
+
+    setIsConnectingTerra(true);
+
+    try {
+      const response = await fetch('/api/terra/widget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: profile.id,
+          // Custom redirect URLs for onboarding flow
+          successRedirectUrl: `${window.location.origin}/onboarding?terra=connected&step=11`,
+          failureRedirectUrl: `${window.location.origin}/onboarding?terra=failed&step=11`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create connection session');
+      }
+
+      const data = await response.json();
+      // Redirect to Terra widget
+      window.location.href = data.url;
+    } catch (err) {
+      console.error('Error connecting device:', err);
+      setIsConnectingTerra(false);
+    }
+  };
+
+  // Check for Terra connection status in URL params (after redirect)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const terraStatus = params.get('terra');
+    const stepParam = params.get('step');
+
+    if (terraStatus === 'connected' && stepParam === '11') {
+      // Successfully connected - could fetch actual connected device
+      // For now, just mark as having a connected device
+      setTerraConnectedDevices(prev => [...prev, 'device']);
+      // Clean up URL params
+      window.history.replaceState({}, '', '/onboarding');
+      // Navigate to step 11
+      setStep(11);
+    } else if (terraStatus === 'failed' && stepParam === '11') {
+      // Connection failed - clean up URL
+      window.history.replaceState({}, '', '/onboarding');
+      setStep(11);
+    }
+  }, []);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF6F1]">
-        <p className="text-[#B5AFA8] text-lg">Loading...</p>
+      <div className="min-h-screen flex flex-col bg-[#FAF6F1]">
+        {/* Header skeleton */}
+        <div className="px-6 pt-8 pb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10" />
+            <div className="skeleton w-12 h-6 rounded-lg" />
+            <div className="w-10" />
+          </div>
+          <div className="skeleton h-1.5 rounded-full" />
+        </div>
+
+        {/* Content skeleton */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 space-y-4">
+          <div className="skeleton w-48 h-8 rounded-lg" />
+          <div className="skeleton w-64 h-4 rounded-lg" />
+          <div className="skeleton w-56 h-4 rounded-lg" />
+        </div>
+
+        {/* Button skeleton */}
+        <div className="px-6 pb-8">
+          <div className="skeleton h-14 rounded-full" />
+        </div>
       </div>
     );
   }
@@ -445,8 +572,52 @@ export default function OnboardingPage() {
     'fitbit': 'Fitbit',
   };
 
+  // Quick action handlers
+  const handleCheckInNow = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    setShowConfetti(true);
+
+    try {
+      addPoints('complete-onboarding', POINTS_CONFIG.COMPLETE_ONBOARDING, 'Completed onboarding');
+      recalculateScores();
+      await completeOnboarding();
+
+      setTimeout(() => {
+        router.push('/chat');
+      }, 800);
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      setIsSaving(false);
+      setShowConfetti(false);
+    }
+  };
+
+  const handleExploreApp = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    setShowConfetti(true);
+
+    try {
+      addPoints('complete-onboarding', POINTS_CONFIG.COMPLETE_ONBOARDING, 'Completed onboarding');
+      recalculateScores();
+      await completeOnboarding();
+
+      setTimeout(() => {
+        router.push('/home');
+      }, 800);
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      setIsSaving(false);
+      setShowConfetti(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF6F1]">
+      {/* Confetti celebration */}
+      <Confetti active={showConfetti} />
+
       {/* Header with back button and progress */}
       <div className="px-6 pt-8 pb-4">
         <div className="flex items-center justify-between mb-4">
@@ -844,39 +1015,74 @@ export default function OnboardingPage() {
           <>
             <div className="pt-4 space-y-2">
               <Message visible={messagesVisible >= 1}>
-                Let&apos;s connect some data.
+                Let&apos;s connect your wearables.
               </Message>
               <Message visible={messagesVisible >= 2} size="md">
                 The more I can see, the better I can help. You control what&apos;s shared.
               </Message>
             </div>
             <FadeIn visible={contentVisible} className="mt-6 flex-1">
-              <div className="space-y-3">
-                {(['apple-health', 'oura', 'whoop', 'garmin', 'fitbit'] as ConnectedApp[]).map((app) => (
-                  <button
-                    key={app}
-                    onClick={() => toggleApp(app)}
-                    className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all duration-300 ${
-                      localConnectedApps.includes(app)
-                        ? 'bg-[#FFE8DC] border-2 border-[#E07A5F]'
-                        : 'bg-[#F5EDE4] border-2 border-transparent hover:bg-[#EBE3DA]'
-                    }`}
-                  >
-                    <span className={`font-medium ${localConnectedApps.includes(app) ? 'text-[#E07A5F]' : 'text-[#2D2A26]'}`}>
-                      {appNames[app]}
-                    </span>
-                    {localConnectedApps.includes(app) ? (
-                      <Check className="w-5 h-5 text-[#E07A5F]" />
-                    ) : (
-                      <span className="text-sm text-[#8A8580]">Connect</span>
-                    )}
-                  </button>
-                ))}
+              {/* Terra Connected Badge */}
+              {terraConnectedDevices.length > 0 && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-600" />
+                  <span className="text-green-700 font-medium">Device connected successfully!</span>
+                </div>
+              )}
+
+              {/* Supported devices preview with brand colors */}
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {[
+                  { id: 'oura', name: 'Oura', emoji: '💍' },
+                  { id: 'whoop', name: 'Whoop', emoji: '⌚' },
+                  { id: 'garmin', name: 'Garmin', emoji: '⌚' },
+                  { id: 'fitbit', name: 'Fitbit', emoji: '📊' },
+                  { id: 'apple-health', name: 'Apple', emoji: '🍎' },
+                  { id: 'google-fit', name: 'Google', emoji: '📱' },
+                ].map((device) => {
+                  const brandColor = BRAND_COLORS[device.id];
+                  return (
+                    <div
+                      key={device.id}
+                      className="flex flex-col items-center p-3 rounded-xl bg-[#F5EDE4] border-2 border-transparent"
+                    >
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${
+                        brandColor ? brandColor.iconBg : 'bg-gray-200'
+                      }`}>
+                        <span className="text-lg">{device.emoji}</span>
+                      </div>
+                      <span className="text-xs text-[#8A8580] font-medium">{device.name}</span>
+                    </div>
+                  );
+                })}
               </div>
+
+              {/* Connect Device Button */}
+              <button
+                onClick={handleConnectDevice}
+                disabled={isConnectingTerra}
+                className="w-full p-4 rounded-2xl bg-white border-2 border-dashed border-[#E07A5F] flex items-center justify-center gap-3 transition-all duration-300 hover:bg-[#FFF5F2] active:scale-[0.98] disabled:opacity-50"
+              >
+                {isConnectingTerra ? (
+                  <>
+                    <Loader2 className="w-5 h-5 text-[#E07A5F] animate-spin" />
+                    <span className="font-medium text-[#E07A5F]">Connecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-2xl">+</span>
+                    <span className="font-medium text-[#E07A5F]">Connect a Device</span>
+                  </>
+                )}
+              </button>
+
+              <p className="text-center text-xs text-[#B5AFA8] mt-4">
+                Securely connect via Terra • Your data stays private
+              </p>
             </FadeIn>
             <FadeIn visible={contentVisible} delay={100} className="mt-4">
               <Button fullWidth size="lg" onClick={handleNext}>
-                {localConnectedApps.length > 0 ? 'Continue' : "I'll do this later"}
+                {terraConnectedDevices.length > 0 ? 'Continue' : "I'll do this later"}
               </Button>
             </FadeIn>
           </>
@@ -987,7 +1193,7 @@ export default function OnboardingPage() {
               </FadeIn>
             </div>
             <FadeIn visible={contentVisible}>
-              <Button fullWidth size="lg" onClick={handleNext} className="animate-pulse">
+              <Button fullWidth size="lg" onClick={handleNext} glow>
                 I&apos;m in
               </Button>
             </FadeIn>
@@ -1059,14 +1265,19 @@ export default function OnboardingPage() {
                   }}
                 >
                   <div className="bg-[#F5EDE4] rounded-2xl rounded-tl-sm p-4 max-w-[85%]">
-                    <p className="text-[#2D2A26]">Let&apos;s check in tomorrow morning. I&apos;ll be here.</p>
+                    <p className="text-[#2D2A26]">Ready when you are.</p>
                   </div>
                 </div>
               </div>
             </div>
-            <FadeIn visible={aiMessagesVisible >= 4} delay={500}>
-              <Button fullWidth size="lg" onClick={handleNext} disabled={isSaving}>
-                {isSaving ? 'Setting up...' : 'Start my journey'}
+
+            {/* Quick action buttons */}
+            <FadeIn visible={aiMessagesVisible >= 4} delay={500} className="space-y-3">
+              <Button fullWidth size="lg" onClick={handleCheckInNow} disabled={isSaving} glow>
+                {isSaving ? 'Setting up...' : 'Check in now'}
+              </Button>
+              <Button fullWidth size="lg" variant="secondary" onClick={handleExploreApp} disabled={isSaving}>
+                Explore the app
               </Button>
             </FadeIn>
           </>
