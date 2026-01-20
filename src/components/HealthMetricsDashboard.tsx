@@ -1,37 +1,79 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Moon, Heart, Footprints, Activity, Zap, AlertCircle } from 'lucide-react';
+import { RefreshCw, Moon, Heart, Footprints, Activity, Zap, AlertCircle, TrendingUp, TrendingDown, Minus, Brain, Battery } from 'lucide-react';
 import { HealthMetrics } from '@/types';
 
 interface HealthMetricsDashboardProps {
   userId: string;
 }
 
+type TrendDirection = 'up' | 'down' | 'stable';
+type TrendSentiment = 'positive' | 'negative' | 'neutral';
+
 interface MetricCardProps {
   icon: React.ReactNode;
   label: string;
   value: string | number;
   unit?: string;
-  subtext?: string;
   color: string;
+  trend?: TrendDirection;
+  trendSentiment?: TrendSentiment;
+  delta?: number;
+  deltaUnit?: string;
+  comparison?: string;
 }
 
-function MetricCard({ icon, label, value, unit, subtext, color }: MetricCardProps) {
+function MetricCard({
+  icon,
+  label,
+  value,
+  unit,
+  color,
+  trend,
+  trendSentiment = 'neutral',
+  delta,
+  deltaUnit = '',
+  comparison,
+}: MetricCardProps) {
+  const getTrendColor = () => {
+    if (trendSentiment === 'positive') return 'text-green-500';
+    if (trendSentiment === 'negative') return 'text-red-500';
+    return 'text-[#8A8580]';
+  };
+
+  const getDeltaBgColor = () => {
+    if (trendSentiment === 'positive') return 'bg-green-50 text-green-600';
+    if (trendSentiment === 'negative') return 'bg-red-50 text-red-600';
+    return 'bg-[#F5EDE4] text-[#8A8580]';
+  };
+
+  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
+
   return (
     <div className="bg-white rounded-2xl p-4 flex flex-col">
-      <div className="flex items-center gap-2 mb-2">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color}`}>
-          {icon}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color}`}>
+            {icon}
+          </div>
+          <span className="text-xs text-[#8A8580] uppercase tracking-wide">{label}</span>
         </div>
-        <span className="text-xs text-[#8A8580] uppercase tracking-wide">{label}</span>
+        {trend && (
+          <TrendIcon className={`w-4 h-4 ${getTrendColor()}`} />
+        )}
       </div>
-      <div className="flex items-baseline gap-1">
+      <div className="flex items-baseline gap-2">
         <span className="text-2xl font-semibold text-[#2D2A26]">{value}</span>
         {unit && <span className="text-sm text-[#8A8580]">{unit}</span>}
+        {delta !== undefined && delta !== 0 && (
+          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${getDeltaBgColor()}`}>
+            {delta > 0 ? '+' : ''}{delta}{deltaUnit}
+          </span>
+        )}
       </div>
-      {subtext && (
-        <span className="text-xs text-[#8A8580] mt-1">{subtext}</span>
+      {comparison && (
+        <span className="text-xs text-[#8A8580] mt-1">{comparison}</span>
       )}
     </div>
   );
@@ -90,23 +132,6 @@ export default function HealthMetricsDashboard({ userId }: HealthMetricsDashboar
     return `${diffDays}d ago`;
   };
 
-  const getSleepQualityColor = (quality: string) => {
-    switch (quality) {
-      case 'excellent': return 'text-green-500';
-      case 'good': return 'text-green-400';
-      case 'fair': return 'text-yellow-500';
-      default: return 'text-red-400';
-    }
-  };
-
-  const getRecoveryColor = (status: string) => {
-    switch (status) {
-      case 'high': return 'text-green-500';
-      case 'moderate': return 'text-yellow-500';
-      default: return 'text-red-400';
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="bg-[#F5EDE4] rounded-2xl p-6">
@@ -156,73 +181,169 @@ export default function HealthMetricsDashboard({ userId }: HealthMetricsDashboar
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 gap-3">
-        {/* Sleep */}
-        {metrics?.sleep && (
-          <MetricCard
-            icon={<Moon className="w-4 h-4 text-indigo-500" />}
-            label="Sleep"
-            value={metrics.sleep.lastNightHours}
-            unit="hrs"
-            subtext={<span className={getSleepQualityColor(metrics.sleep.quality)}>{metrics.sleep.quality}</span> as unknown as string}
-            color="bg-indigo-50"
-          />
-        )}
+        {/* Sleep - more is better */}
+        {metrics?.sleep && (() => {
+          const delta = Math.round((metrics.sleep.lastNightHours - metrics.sleep.avgWeekHours) * 10) / 10;
+          const trend: TrendDirection = delta > 0.3 ? 'up' : delta < -0.3 ? 'down' : 'stable';
+          const sentiment: TrendSentiment = delta > 0.3 ? 'positive' : delta < -0.3 ? 'negative' : 'neutral';
+          return (
+            <MetricCard
+              icon={<Moon className="w-4 h-4 text-indigo-500" />}
+              label="Sleep"
+              value={metrics.sleep.lastNightHours}
+              unit="hrs"
+              color="bg-indigo-50"
+              trend={trend}
+              trendSentiment={sentiment}
+              delta={delta}
+              deltaUnit="h"
+              comparison={`vs ${metrics.sleep.avgWeekHours}h avg`}
+            />
+          );
+        })()}
 
-        {/* HRV */}
-        {metrics?.hrv && (
-          <MetricCard
-            icon={<Activity className="w-4 h-4 text-purple-500" />}
-            label="HRV"
-            value={metrics.hrv.current}
-            unit="ms"
-            subtext={`Baseline: ${metrics.hrv.baseline}ms`}
-            color="bg-purple-50"
-          />
-        )}
+        {/* HRV - higher is better */}
+        {metrics?.hrv && (() => {
+          const delta = metrics.hrv.current - metrics.hrv.baseline;
+          // For HRV: up is good, down is bad
+          const sentiment: TrendSentiment =
+            metrics.hrv.trend === 'up' ? 'positive' :
+            metrics.hrv.trend === 'down' ? 'negative' : 'neutral';
+          return (
+            <MetricCard
+              icon={<Activity className="w-4 h-4 text-purple-500" />}
+              label="HRV"
+              value={metrics.hrv.current}
+              unit="ms"
+              color="bg-purple-50"
+              trend={metrics.hrv.trend}
+              trendSentiment={sentiment}
+              delta={delta}
+              deltaUnit="ms"
+              comparison={`baseline ${metrics.hrv.baseline}ms`}
+            />
+          );
+        })()}
 
-        {/* Resting Heart Rate */}
-        {metrics?.rhr && (
-          <MetricCard
-            icon={<Heart className="w-4 h-4 text-red-500" />}
-            label="Resting HR"
-            value={metrics.rhr.current}
-            unit="bpm"
-            subtext={metrics.rhr.trend === 'up' ? '↑ trending up' : metrics.rhr.trend === 'down' ? '↓ trending down' : '→ stable'}
-            color="bg-red-50"
-          />
-        )}
+        {/* Resting Heart Rate - lower is better */}
+        {metrics?.rhr && (() => {
+          const delta = metrics.rhr.current - metrics.rhr.baseline;
+          // For RHR: down is good, up is bad (inverted)
+          const sentiment: TrendSentiment =
+            metrics.rhr.trend === 'down' ? 'positive' :
+            metrics.rhr.trend === 'up' ? 'negative' : 'neutral';
+          return (
+            <MetricCard
+              icon={<Heart className="w-4 h-4 text-red-500" />}
+              label="Resting HR"
+              value={metrics.rhr.current}
+              unit="bpm"
+              color="bg-red-50"
+              trend={metrics.rhr.trend}
+              trendSentiment={sentiment}
+              delta={delta}
+              deltaUnit=""
+              comparison={`baseline ${metrics.rhr.baseline}`}
+            />
+          );
+        })()}
 
-        {/* Steps */}
-        {metrics?.steps && (
-          <MetricCard
-            icon={<Footprints className="w-4 h-4 text-green-500" />}
-            label="Steps"
-            value={metrics.steps.today.toLocaleString()}
-            subtext={`Avg: ${metrics.steps.avgDaily.toLocaleString()}`}
-            color="bg-green-50"
-          />
-        )}
+        {/* Steps - more is better */}
+        {metrics?.steps && (() => {
+          const delta = metrics.steps.today - metrics.steps.avgDaily;
+          const deltaPercent = Math.round((delta / metrics.steps.avgDaily) * 100);
+          const trend: TrendDirection = deltaPercent > 10 ? 'up' : deltaPercent < -10 ? 'down' : 'stable';
+          const sentiment: TrendSentiment = deltaPercent > 10 ? 'positive' : deltaPercent < -10 ? 'negative' : 'neutral';
+          return (
+            <MetricCard
+              icon={<Footprints className="w-4 h-4 text-green-500" />}
+              label="Steps"
+              value={metrics.steps.today.toLocaleString()}
+              color="bg-green-50"
+              trend={trend}
+              trendSentiment={sentiment}
+              delta={deltaPercent}
+              deltaUnit="%"
+              comparison={`avg ${metrics.steps.avgDaily.toLocaleString()}`}
+            />
+          );
+        })()}
 
-        {/* Recovery */}
-        {metrics?.recovery && (
-          <MetricCard
-            icon={<Zap className="w-4 h-4 text-amber-500" />}
-            label="Recovery"
-            value={metrics.recovery.score}
-            unit="%"
-            subtext={<span className={getRecoveryColor(metrics.recovery.status)}>{metrics.recovery.status}</span> as unknown as string}
-            color="bg-amber-50"
-          />
-        )}
+        {/* Recovery/Body Battery - higher is better */}
+        {metrics?.recovery && (() => {
+          const sentiment: TrendSentiment =
+            metrics.recovery.status === 'high' ? 'positive' :
+            metrics.recovery.status === 'low' ? 'negative' : 'neutral';
+          const trend: TrendDirection =
+            metrics.recovery.status === 'high' ? 'up' :
+            metrics.recovery.status === 'low' ? 'down' : 'stable';
+          // Use Battery icon for Garmin Body Battery, Zap for others
+          const isBodyBattery = metrics.recovery.label === 'Body Battery';
+          return (
+            <MetricCard
+              icon={isBodyBattery
+                ? <Battery className="w-4 h-4 text-amber-500" />
+                : <Zap className="w-4 h-4 text-amber-500" />
+              }
+              label={metrics.recovery.label || 'Recovery'}
+              value={metrics.recovery.score}
+              unit={isBodyBattery ? '' : '%'}
+              color="bg-amber-50"
+              trend={trend}
+              trendSentiment={sentiment}
+              comparison={metrics.recovery.status}
+            />
+          );
+        })()}
 
-        {/* Strain */}
-        {metrics?.strain && (
+        {/* Stress - Garmin specific (lower is better) */}
+        {metrics?.stress && (() => {
+          // For stress: lower is better (calmer)
+          const sentiment: TrendSentiment =
+            metrics.stress.category === 'rest' ? 'positive' :
+            metrics.stress.category === 'high' ? 'negative' : 'neutral';
+          const trend: TrendDirection =
+            metrics.stress.category === 'rest' || metrics.stress.category === 'low' ? 'down' :
+            metrics.stress.category === 'high' ? 'up' : 'stable';
+          return (
+            <MetricCard
+              icon={<Brain className="w-4 h-4 text-blue-500" />}
+              label="Stress"
+              value={metrics.stress.level}
+              color="bg-blue-50"
+              trend={trend}
+              trendSentiment={sentiment}
+              comparison={metrics.stress.category}
+            />
+          );
+        })()}
+
+        {/* Strain - Whoop specific */}
+        {metrics?.strain && (() => {
+          const delta = Math.round((metrics.strain.score - metrics.strain.weeklyAvg) * 10) / 10;
+          const trend: TrendDirection = delta > 1 ? 'up' : delta < -1 ? 'down' : 'stable';
+          return (
+            <MetricCard
+              icon={<Activity className="w-4 h-4 text-orange-500" />}
+              label="Strain"
+              value={metrics.strain.score}
+              color="bg-orange-50"
+              trend={trend}
+              trendSentiment="neutral"
+              delta={delta}
+              comparison={`avg ${metrics.strain.weeklyAvg}`}
+            />
+          );
+        })()}
+
+        {/* Fitness Age - if available */}
+        {metrics?.fitnessAge && (
           <MetricCard
-            icon={<Activity className="w-4 h-4 text-orange-500" />}
-            label="Strain"
-            value={metrics.strain.yesterday}
-            subtext={`Weekly avg: ${metrics.strain.weeklyAvg}`}
-            color="bg-orange-50"
+            icon={<Activity className="w-4 h-4 text-teal-500" />}
+            label="Fitness Age"
+            value={metrics.fitnessAge}
+            unit="yrs"
+            color="bg-teal-50"
           />
         )}
       </div>

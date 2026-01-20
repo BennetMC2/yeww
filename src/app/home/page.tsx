@@ -12,7 +12,7 @@ import AddDataCTA from '@/components/home/AddDataCTA';
 import SmartCheckInCard from '@/components/home/SmartCheckInCard';
 import { useApp } from '@/contexts/AppContext';
 import { DailyInsight, HealthScoreTrend, HealthMetrics } from '@/types';
-import { generateCheckInContext, CheckInContext } from '@/lib/checkInContext';
+import { generateCheckInContext, CheckInContext, getCheckInResponse } from '@/lib/checkInContext';
 import { calculateStreakBonus, POINTS_CONFIG } from '@/lib/scores';
 
 export default function HomePage() {
@@ -134,7 +134,6 @@ export default function HomePage() {
     addMessage('user', responseText);
 
     // Get response message
-    const { getCheckInResponse } = require('@/lib/checkInContext');
     const feedbackMessage = getCheckInResponse(value, checkInContext?.contextType || 'default');
     addMessage('assistant', feedbackMessage);
   };

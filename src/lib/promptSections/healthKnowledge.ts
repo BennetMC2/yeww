@@ -95,8 +95,17 @@ No health metrics available for this session. Encourage connecting data sources 
   }
 
   if (metrics.strain) {
-    const { yesterday, weeklyAvg } = metrics.strain;
-    sections.push(`Strain: ${yesterday} yesterday (weekly avg: ${weeklyAvg})`);
+    const { score, weeklyAvg } = metrics.strain;
+    sections.push(`Strain: ${score} (weekly avg: ${weeklyAvg})`);
+  }
+
+  if (metrics.stress) {
+    const { level, category } = metrics.stress;
+    sections.push(`Stress: ${level} (${category})`);
+  }
+
+  if (metrics.fitnessAge) {
+    sections.push(`Fitness Age: ${metrics.fitnessAge} years`);
   }
 
   if (metrics.steps) {

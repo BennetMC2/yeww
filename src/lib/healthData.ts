@@ -4,7 +4,7 @@
  */
 
 import { supabase } from './supabase';
-import { HealthMetrics } from '@/types';
+import { HealthMetrics, HealthProvider } from '@/types';
 
 interface TerraPayload {
   id: string;
@@ -15,20 +15,72 @@ interface TerraPayload {
   created_at: string;
 }
 
+interface TerraUser {
+  provider: string;
+}
+
+/**
+ * Get the provider for a user from terra_users
+ */
+async function getProvider(userId: string): Promise<HealthProvider> {
+  const { data } = await supabase
+    .from('terra_users')
+    .select('provider')
+    .eq('reference_id', userId)
+    .order('last_webhook_update', { ascending: false })
+    .limit(1);
+
+  if (data && data.length > 0) {
+    const provider = (data[0] as TerraUser).provider?.toUpperCase();
+    if (['GARMIN', 'WHOOP', 'OURA', 'FITBIT', 'APPLE', 'GOOGLE'].includes(provider)) {
+      return provider as HealthProvider;
+    }
+  }
+  return 'UNKNOWN';
+}
+
+/**
+ * Get recovery label based on provider
+ */
+function getRecoveryLabel(provider: HealthProvider): string {
+  switch (provider) {
+    case 'GARMIN':
+      return 'Body Battery';
+    case 'OURA':
+      return 'Readiness';
+    case 'WHOOP':
+      return 'Recovery';
+    default:
+      return 'Recovery';
+  }
+}
+
+/**
+ * Get stress category from level (Garmin: 0-100, lower is calmer)
+ */
+function getStressCategory(level: number): 'rest' | 'low' | 'medium' | 'high' {
+  if (level <= 25) return 'rest';
+  if (level <= 50) return 'low';
+  if (level <= 75) return 'medium';
+  return 'high';
+}
+
 /**
  * Get the latest health metrics for a user
  * This queries Terra's data tables and transforms to our HealthMetrics format
  */
 export async function getLatestHealthMetrics(userId: string): Promise<HealthMetrics | null> {
   try {
-    // Query Terra data payloads for this user (via reference_id which is our userId)
-    // Terra creates tables: terra_users, terra_data_payloads
+    // Get provider first
+    const provider = await getProvider(userId);
+
+    // Query Terra data payloads for this user
     const { data: payloads, error } = await supabase
       .from('terra_data_payloads')
       .select('*')
       .eq('reference_id', userId)
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(100); // Get more to find most recent sleep by date
 
     if (error) {
       console.error('Error fetching Terra data:', error);
@@ -47,31 +99,64 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
       }
     }
 
-    const metrics: HealthMetrics = {};
+    // For sleep, find the most recent by sleep END time (not created_at)
+    const sleepPayloads = payloads.filter(p => p.type === 'sleep');
+    let mostRecentSleep: TerraPayload | null = null;
+    let mostRecentSleepEnd: Date | null = null;
 
-    // Process sleep data
-    if (latestByType['sleep']) {
-      const sleepData = latestByType['sleep'].data as {
-        sleep_durations_data?: { asleep?: { duration_asleep_state_seconds?: number } };
+    for (const payload of sleepPayloads) {
+      const sleepData = payload.data as { metadata?: { end_time?: string } };
+      const endTime = sleepData?.metadata?.end_time;
+      if (endTime) {
+        const endDate = new Date(endTime);
+        if (!mostRecentSleepEnd || endDate > mostRecentSleepEnd) {
+          mostRecentSleepEnd = endDate;
+          mostRecentSleep = payload;
+        }
+      }
+    }
+
+    const metrics: HealthMetrics = {
+      provider,
+    };
+
+    // Process sleep data - use most recent by sleep date
+    if (mostRecentSleep) {
+      const sleepData = mostRecentSleep.data as {
+        metadata?: { start_time?: string; end_time?: string };
+        sleep_durations_data?: {
+          asleep?: { duration_asleep_state_seconds?: number };
+          other?: { duration_in_bed_seconds?: number };
+          sleep_efficiency?: number;
+        };
         sleep_efficiency?: number;
       };
 
       if (sleepData) {
+        // Use duration_asleep_state_seconds for actual sleep time
         const sleepSeconds = sleepData.sleep_durations_data?.asleep?.duration_asleep_state_seconds || 0;
         const sleepHours = sleepSeconds / 3600;
-        const efficiency = sleepData.sleep_efficiency || 0;
+
+        // Get efficiency from nested location or top level
+        const efficiency = sleepData.sleep_durations_data?.sleep_efficiency ||
+                          sleepData.sleep_efficiency || 0;
+
+        // Extract sleep date from start_time
+        const startTime = sleepData.metadata?.start_time;
+        const sleepDate = startTime ? startTime.substring(0, 10) : undefined;
 
         metrics.sleep = {
           lastNightHours: Math.round(sleepHours * 10) / 10,
-          quality: efficiency >= 85 ? 'excellent' : efficiency >= 75 ? 'good' : efficiency >= 65 ? 'fair' : 'poor',
-          avgWeekHours: sleepHours, // Would need historical data for true average
+          quality: efficiency >= 0.85 ? 'excellent' : efficiency >= 0.75 ? 'good' : efficiency >= 0.65 ? 'fair' : 'poor',
+          avgWeekHours: sleepHours, // TODO: compute from historical data
+          sleepDate,
         };
       }
     }
 
-    // Process daily/body data for HRV and RHR
-    if (latestByType['daily'] || latestByType['body']) {
-      const dailyData = (latestByType['daily']?.data || latestByType['body']?.data) as {
+    // Process daily data for RHR, HRV, steps, stress, body battery
+    if (latestByType['daily']) {
+      const dailyData = latestByType['daily'].data as {
         heart_rate_data?: {
           summary?: {
             resting_hr_bpm?: number;
@@ -84,100 +169,124 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
             avg_hrv_rmssd?: number;
           };
         };
-      };
-
-      if (dailyData) {
-        const rhr = dailyData.heart_rate_data?.summary?.resting_hr_bpm;
-        const hrv = dailyData.heart_rate_data?.summary?.avg_hrv_rmssd ||
-                    dailyData.heart_rate_data?.summary?.avg_hrv_sdnn ||
-                    dailyData.hrv_data?.summary?.avg_hrv_rmssd;
-
-        if (rhr) {
-          metrics.rhr = {
-            current: Math.round(rhr),
-            baseline: Math.round(rhr), // Would need historical data for true baseline
-            trend: 'stable',
-          };
-        }
-
-        if (hrv) {
-          metrics.hrv = {
-            current: Math.round(hrv),
-            baseline: Math.round(hrv), // Would need historical data for true baseline
-            trend: 'stable',
-          };
-        }
-      }
-    }
-
-    // Process activity data for steps
-    if (latestByType['activity'] || latestByType['daily']) {
-      const activityData = (latestByType['activity']?.data || latestByType['daily']?.data) as {
         distance_data?: { steps?: number };
-        active_durations_data?: { activity_seconds?: number };
-      };
-
-      if (activityData) {
-        const steps = activityData.distance_data?.steps;
-        if (steps) {
-          metrics.steps = {
-            today: steps,
-            avgDaily: steps, // Would need historical data for true average
-          };
-        }
-      }
-    }
-
-    // Process recovery/strain if available (Whoop, Oura, Garmin)
-    if (latestByType['body']) {
-      const bodyData = latestByType['body'].data as {
-        recovery_data?: { recovery_score?: number };
-        stress_data?: { stress_level?: number };
-      };
-
-      if (bodyData?.recovery_data?.recovery_score) {
-        const score = bodyData.recovery_data.recovery_score;
-        metrics.recovery = {
-          score: Math.round(score),
-          status: score >= 67 ? 'high' : score >= 34 ? 'moderate' : 'low',
-        };
-      }
-    }
-
-    // Process Garmin-specific data (Body Battery, Stress)
-    if (latestByType['daily']) {
-      const dailyData = latestByType['daily'].data as {
         stress_data?: {
           avg_stress_level?: number;
           body_battery_samples?: { level?: number; timestamp?: string }[];
         };
+        oxygen_data?: {
+          vo2max_ml_per_min_per_kg?: number;
+        };
       };
 
-      // Garmin Body Battery as recovery score (0-100, higher is better)
-      if (dailyData?.stress_data?.body_battery_samples?.length) {
-        const samples = dailyData.stress_data.body_battery_samples;
-        // Get the most recent body battery reading
-        const latestSample = samples[samples.length - 1];
-        if (latestSample?.level && !metrics.recovery) {
-          metrics.recovery = {
-            score: latestSample.level,
-            status: latestSample.level >= 67 ? 'high' : latestSample.level >= 34 ? 'moderate' : 'low',
+      if (dailyData) {
+        // Resting heart rate
+        const rhr = dailyData.heart_rate_data?.summary?.resting_hr_bpm;
+        if (rhr) {
+          metrics.rhr = {
+            current: Math.round(rhr),
+            baseline: Math.round(rhr), // TODO: compute from historical data
+            trend: 'stable',
           };
         }
+
+        // HRV (only if available - not all devices export this)
+        const hrv = dailyData.heart_rate_data?.summary?.avg_hrv_rmssd ||
+                    dailyData.heart_rate_data?.summary?.avg_hrv_sdnn ||
+                    dailyData.hrv_data?.summary?.avg_hrv_rmssd;
+        if (hrv) {
+          metrics.hrv = {
+            current: Math.round(hrv),
+            baseline: Math.round(hrv), // TODO: compute from historical data
+            trend: 'stable',
+          };
+        }
+
+        // Steps
+        const steps = dailyData.distance_data?.steps;
+        if (steps) {
+          metrics.steps = {
+            today: steps,
+            avgDaily: steps, // TODO: compute from historical data
+          };
+        }
+
+        // VO2 Max (if available)
+        const vo2max = dailyData.oxygen_data?.vo2max_ml_per_min_per_kg;
+        if (vo2max) {
+          metrics.vo2Max = Math.round(vo2max * 10) / 10;
+        }
+
+        // Garmin-specific: Body Battery and Stress
+        if (provider === 'GARMIN' && dailyData.stress_data) {
+          // Body Battery as recovery - get most recent sample
+          if (dailyData.stress_data.body_battery_samples?.length) {
+            const samples = dailyData.stress_data.body_battery_samples;
+            const latestSample = samples[samples.length - 1];
+            if (latestSample?.level != null) {
+              metrics.recovery = {
+                score: latestSample.level,
+                status: latestSample.level >= 67 ? 'high' : latestSample.level >= 34 ? 'moderate' : 'low',
+                label: getRecoveryLabel(provider),
+              };
+            }
+          }
+
+          // Stress level (Garmin-specific, NOT strain)
+          if (dailyData.stress_data.avg_stress_level != null) {
+            const level = dailyData.stress_data.avg_stress_level;
+            metrics.stress = {
+              level,
+              category: getStressCategory(level),
+            };
+          }
+        }
+      }
+    }
+
+    // Process body data for fitness metrics and non-Garmin recovery
+    if (latestByType['body']) {
+      const bodyData = latestByType['body'].data as {
+        recovery_data?: { recovery_score?: number };
+        measurements_data?: {
+          measurements?: { estimated_fitness_age?: number }[];
+        };
+      };
+
+      // Recovery score (Whoop, Oura)
+      if (bodyData?.recovery_data?.recovery_score && !metrics.recovery) {
+        const score = bodyData.recovery_data.recovery_score;
+        metrics.recovery = {
+          score: Math.round(score),
+          status: score >= 67 ? 'high' : score >= 34 ? 'moderate' : 'low',
+          label: getRecoveryLabel(provider),
+        };
       }
 
-      // Garmin stress level as strain (0-100, lower is calmer)
-      // Invert it so higher = more strain (consistent with Whoop)
-      if (dailyData?.stress_data?.avg_stress_level != null && !metrics.strain) {
-        const stressLevel = dailyData.stress_data.avg_stress_level;
+      // Fitness age
+      if (bodyData?.measurements_data?.measurements?.length) {
+        const measurement = bodyData.measurements_data.measurements[0];
+        if (measurement?.estimated_fitness_age) {
+          metrics.fitnessAge = measurement.estimated_fitness_age;
+        }
+      }
+    }
+
+    // Whoop-specific: Strain (different from Garmin stress)
+    if (provider === 'WHOOP' && latestByType['daily']) {
+      const dailyData = latestByType['daily'].data as {
+        strain_data?: { strain_level?: number };
+      };
+
+      if (dailyData?.strain_data?.strain_level != null) {
         metrics.strain = {
-          yesterday: stressLevel,
-          weeklyAvg: stressLevel,
+          score: dailyData.strain_data.strain_level,
+          weeklyAvg: dailyData.strain_data.strain_level, // TODO: compute from historical
         };
       }
     }
 
-    return Object.keys(metrics).length > 0 ? metrics : null;
+    return Object.keys(metrics).length > 1 ? metrics : null; // > 1 because provider is always set
   } catch (error) {
     console.error('Error processing health data:', error);
     return null;
