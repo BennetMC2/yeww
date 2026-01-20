@@ -89,18 +89,15 @@ async function withTimeout<T>(
  */
 export async function getLatestHealthMetrics(userId: string): Promise<HealthMetrics | null> {
   try {
-    // Get provider first (with timeout)
-    const provider = await withTimeout(getProvider(userId), 3000, 'UNKNOWN' as HealthProvider);
-
     // Only fetch data from the last 14 days
     const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Query Terra data payloads for this user - optimized query with timeout
-    let payloads: TerraPayload[] | null = null;
+    // Run provider and payloads queries IN PARALLEL with aggressive timeouts
+    const providerPromise = withTimeout(getProvider(userId), 2000, 'UNKNOWN' as HealthProvider);
 
-    try {
+    const payloadsPromise = (async () => {
       const timeoutPromise = new Promise<null>((_, reject) =>
-        setTimeout(() => reject(new Error('Query timeout')), 5000)
+        setTimeout(() => reject(new Error('Query timeout')), 3000)
       );
 
       const queryPromise = supabase
@@ -109,17 +106,20 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
         .eq('reference_id', userId)
         .gte('created_at', fourteenDaysAgo)
         .order('created_at', { ascending: false })
-        .limit(14) // One per day max
+        .limit(14)
         .then(res => {
           if (res.error) throw res.error;
           return res.data as TerraPayload[];
         });
 
-      payloads = await Promise.race([queryPromise, timeoutPromise]);
-    } catch (error) {
-      console.error('Error or timeout fetching Terra data:', error);
-      return null;
-    }
+      return Promise.race([queryPromise, timeoutPromise]);
+    })();
+
+    // Wait for both in parallel
+    const [provider, payloads] = await Promise.all([
+      providerPromise,
+      payloadsPromise.catch(() => null),
+    ]);
 
     if (!payloads || payloads.length === 0) {
       return null;
