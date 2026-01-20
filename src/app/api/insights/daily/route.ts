@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getLatestHealthMetrics } from '@/lib/healthData';
 import { getMetricTrends } from '@/lib/healthHistory';
 import { generateDailyInsight, DailyInsight } from '@/lib/insightGenerator';
+import { getCachedMetrics, setCachedMetrics, hasCachedMetrics } from '@/lib/metricsCache';
 import { supabase } from '@/lib/supabase';
 
 interface CachedInsight {
@@ -64,11 +65,15 @@ export async function GET(request: NextRequest) {
       ? Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24))
       : 0;
 
-    // Fetch metrics and trends
-    const [metrics, trends] = await Promise.all([
-      getLatestHealthMetrics(userId),
-      getMetricTrends(userId),
-    ]);
+    // Try to use cached metrics first, fetch fresh if not available
+    let metrics = hasCachedMetrics(userId) ? getCachedMetrics(userId) : undefined;
+    if (metrics === undefined) {
+      metrics = await getLatestHealthMetrics(userId);
+      setCachedMetrics(userId, metrics);
+    }
+
+    // Fetch trends (lightweight query from health_daily table)
+    const trends = await getMetricTrends(userId);
 
     // Generate insight
     const insight = generateDailyInsight(metrics, trends, streak, daysOnPlatform);

@@ -8,8 +8,6 @@ import { HealthMetrics, HealthProvider } from '@/types';
 
 interface TerraPayload {
   id: string;
-  user_id: string;
-  reference_id: string;
   type: string;
   data: unknown;
   created_at: string;
@@ -66,24 +64,60 @@ function getStressCategory(level: number): 'rest' | 'low' | 'medium' | 'high' {
 }
 
 /**
+ * Timeout wrapper for database queries
+ * Returns fallback value if query exceeds timeout
+ */
+async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  fallback: T
+): Promise<T> {
+  const timeout = new Promise<T>((_, reject) =>
+    setTimeout(() => reject(new Error('Query timeout')), ms)
+  );
+  try {
+    return await Promise.race([promise, timeout]);
+  } catch (error) {
+    console.warn('Query timed out, using fallback:', error);
+    return fallback;
+  }
+}
+
+/**
  * Get the latest health metrics for a user
  * This queries Terra's data tables and transforms to our HealthMetrics format
  */
 export async function getLatestHealthMetrics(userId: string): Promise<HealthMetrics | null> {
   try {
-    // Get provider first
-    const provider = await getProvider(userId);
+    // Get provider first (with timeout)
+    const provider = await withTimeout(getProvider(userId), 3000, 'UNKNOWN' as HealthProvider);
 
-    // Query Terra data payloads for this user
-    const { data: payloads, error } = await supabase
-      .from('terra_data_payloads')
-      .select('*')
-      .eq('reference_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100); // Get more to find most recent sleep by date
+    // Only fetch data from the last 14 days
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    if (error) {
-      console.error('Error fetching Terra data:', error);
+    // Query Terra data payloads for this user - optimized query with timeout
+    let payloads: TerraPayload[] | null = null;
+
+    try {
+      const timeoutPromise = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error('Query timeout')), 5000)
+      );
+
+      const queryPromise = supabase
+        .from('terra_data_payloads')
+        .select('id, type, data, created_at')
+        .eq('reference_id', userId)
+        .gte('created_at', fourteenDaysAgo)
+        .order('created_at', { ascending: false })
+        .limit(14) // One per day max
+        .then(res => {
+          if (res.error) throw res.error;
+          return res.data as TerraPayload[];
+        });
+
+      payloads = await Promise.race([queryPromise, timeoutPromise]);
+    } catch (error) {
+      console.error('Error or timeout fetching Terra data:', error);
       return null;
     }
 

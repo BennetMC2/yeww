@@ -58,11 +58,14 @@ export default function HomePage() {
     setIsLoadingInsights(true);
 
     try {
-      // Fetch all data in parallel
-      const [insightRes, historyRes, metricsRes] = await Promise.all([
+      // Fetch metrics FIRST to populate cache, then fetch others in parallel
+      // This prevents 3x redundant calls to getLatestHealthMetrics
+      const metricsRes = await fetch(`/api/health/metrics?userId=${encodeURIComponent(profile.id)}`);
+
+      // Now fetch insights and history (will use cached metrics)
+      const [insightRes, historyRes] = await Promise.all([
         fetch(`/api/insights/daily?userId=${encodeURIComponent(profile.id)}`),
         fetch(`/api/health/score-history?userId=${encodeURIComponent(profile.id)}`),
-        fetch(`/api/health/metrics?userId=${encodeURIComponent(profile.id)}`),
       ]);
 
       // Process responses
