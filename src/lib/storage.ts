@@ -23,8 +23,8 @@ const LOCAL_USER_ID_KEY = 'yeww_user_id';
 // Helper to check if we're in browser
 const isBrowser = typeof window !== 'undefined';
 
-// Get or create local user ID
-function getLocalUserId(): string | null {
+// Get or create local user ID - EXPORTED so AppContext can use it
+export function getLocalUserId(): string | null {
   if (!isBrowser) return null;
   return localStorage.getItem(LOCAL_USER_ID_KEY);
 }
@@ -92,9 +92,9 @@ function profileToDbUser(profile: UserProfile): Record<string, unknown> {
 
 // ============ User Profile ============
 
-export function createDefaultProfile(): UserProfile {
+export function createDefaultProfile(existingId?: string): UserProfile {
   return {
-    id: crypto.randomUUID(),
+    id: existingId || crypto.randomUUID(),  // Preserve existing ID if provided
     name: '',
     createdAt: new Date().toISOString(),
     coachingStyle: 'balanced',
@@ -150,7 +150,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
     ]);
 
     if (userResult.error || !userResult.data) {
-      // Try fallback
+      // User not in Supabase - check for fallback first
       if (isBrowser) {
         const fallback = localStorage.getItem('yeww_profile_fallback');
         if (fallback) {
@@ -161,7 +161,13 @@ export async function getUserProfile(): Promise<UserProfile | null> {
           }
         }
       }
-      return null;
+
+      // No fallback - create new profile with EXISTING localStorage ID
+      // This preserves the ID that was set (e.g., to match Terra reference_id)
+      console.log('Creating new profile with existing localStorage ID:', userId);
+      const newProfile = createDefaultProfile(userId);
+      await saveUserProfile(newProfile);
+      return newProfile;
     }
 
     const pointsHistory: PointsTransaction[] = (pointsResult.data || []).map((p) => ({

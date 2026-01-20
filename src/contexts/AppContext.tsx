@@ -21,6 +21,7 @@ import {
   getUserProfile,
   createDefaultProfile,
   saveUserProfile,
+  getLocalUserId,
   getConversationHistory,
   getProgressData,
   addMessage as addMessageToStorage,
@@ -110,8 +111,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (storedProfile) {
           setProfile(storedProfile);
         } else {
-          // Create new user
-          const newProfile = createDefaultProfile();
+          // Create new user - preserve existing localStorage ID if set (e.g., from Terra connection)
+          const existingId = getLocalUserId();
+          const newProfile = createDefaultProfile(existingId || undefined);
           await saveUserProfile(newProfile);
           setProfile(newProfile);
         }
@@ -120,8 +122,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setProgress(storedProgress);
       } catch (error) {
         console.error('Error loading data:', error);
-        // Fallback to empty state
-        const newProfile = createDefaultProfile();
+        // Fallback to empty state - preserve existing localStorage ID if set
+        const existingId = getLocalUserId();
+        const newProfile = createDefaultProfile(existingId || undefined);
         setProfile(newProfile);
       } finally {
         setIsLoading(false);
