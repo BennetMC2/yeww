@@ -53,27 +53,25 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get user profile for streak and creation date
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('check_in_streak, created_at')
-      .eq('id', userId)
-      .single();
+    // Run all queries in parallel for speed
+    const [profileResult, metricsResult, trends] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('check_in_streak, created_at')
+        .eq('id', userId)
+        .single(),
+      hasCachedMetrics(userId)
+        ? Promise.resolve(getCachedMetrics(userId) ?? null)
+        : getLatestHealthMetrics(userId).then(m => { setCachedMetrics(userId, m); return m; }),
+      getMetricTrends(userId),
+    ]);
+    const metrics = metricsResult ?? null;
 
+    const profile = profileResult.data;
     const streak = profile?.check_in_streak ?? 0;
     const daysOnPlatform = profile?.created_at
       ? Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24))
       : 0;
-
-    // Try to use cached metrics first, fetch fresh if not available
-    let metrics = hasCachedMetrics(userId) ? getCachedMetrics(userId) : undefined;
-    if (metrics === undefined) {
-      metrics = await getLatestHealthMetrics(userId);
-      setCachedMetrics(userId, metrics);
-    }
-
-    // Fetch trends (lightweight query from health_daily table)
-    const trends = await getMetricTrends(userId);
 
     // Generate insight
     const insight = generateDailyInsight(metrics, trends, streak, daysOnPlatform);
