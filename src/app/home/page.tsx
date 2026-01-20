@@ -44,13 +44,6 @@ export default function HomePage() {
     }
   }, [isLoading, profile, router]);
 
-  // Recalculate scores on mount
-  useEffect(() => {
-    if (profile?.onboardingCompleted) {
-      recalculateScores();
-    }
-  }, [profile?.onboardingCompleted, recalculateScores]);
-
   // Fetch insights, trends, and metrics
   const fetchHomeData = useCallback(async () => {
     if (!profile?.id) return;
@@ -80,8 +73,10 @@ export default function HomePage() {
       }
 
       let hasDevice = false;
+      let fetchedMetrics = null;
       if (metricsRes.ok) {
         const data = await metricsRes.json();
+        fetchedMetrics = data.metrics;
         setHealthMetrics(data.metrics);
         hasDevice = data.hasData;
 
@@ -92,6 +87,9 @@ export default function HomePage() {
           profile.lastCheckIn
         );
         setCheckInContext(context);
+
+        // Recalculate scores with pre-fetched metrics (no extra API call)
+        recalculateScores(fetchedMetrics);
       } else {
         // Generate default check-in context
         const context = generateCheckInContext(
@@ -115,7 +113,7 @@ export default function HomePage() {
     } finally {
       setIsLoadingInsights(false);
     }
-  }, [profile?.id, profile?.checkInStreak, profile?.lastCheckIn]);
+  }, [profile?.id, profile?.checkInStreak, profile?.lastCheckIn, recalculateScores]);
 
   useEffect(() => {
     if (profile?.onboardingCompleted) {

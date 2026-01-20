@@ -15,6 +15,7 @@ import {
   Barrier,
   PointsTransaction,
   SharingPreferences,
+  HealthMetrics,
 } from '@/types';
 import {
   getUserProfile,
@@ -71,7 +72,7 @@ interface AppContextType {
   setSharingPreference: (key: keyof SharingPreferences, value: boolean) => void;
 
   // Scores
-  recalculateScores: () => Promise<void>;
+  recalculateScores: (prefetchedMetrics?: HealthMetrics | null) => Promise<void>;
 
   // Conversations
   conversations: ConversationHistory;
@@ -236,11 +237,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Recalculate scores (fetches real health metrics for accurate scoring)
-  const recalculateScores = useCallback(async () => {
+  const recalculateScores = useCallback(async (prefetchedMetrics?: HealthMetrics | null) => {
     if (!profile) return;
 
-    // Fetch real health metrics from Terra data
-    const metrics = await getLatestHealthMetrics(profile.id);
+    // Use prefetched metrics if provided, otherwise fetch
+    const metrics = prefetchedMetrics !== undefined
+      ? prefetchedMetrics
+      : await getLatestHealthMetrics(profile.id);
 
     const healthScore = calculateHealthScore(profile, metrics);
     const reputationPoints = calculateReputationPoints(profile, metrics);
