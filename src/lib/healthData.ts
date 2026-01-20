@@ -89,24 +89,24 @@ async function withTimeout<T>(
  */
 export async function getLatestHealthMetrics(userId: string): Promise<HealthMetrics | null> {
   try {
-    // Only fetch data from the last 14 days
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    // Only fetch data from the last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Run provider and payloads queries IN PARALLEL with aggressive timeouts
-    const providerPromise = withTimeout(getProvider(userId), 2000, 'UNKNOWN' as HealthProvider);
+    // Run provider and payloads queries IN PARALLEL
+    const providerPromise = withTimeout(getProvider(userId), 3000, 'UNKNOWN' as HealthProvider);
 
     const payloadsPromise = (async () => {
       const timeoutPromise = new Promise<null>((_, reject) =>
-        setTimeout(() => reject(new Error('Query timeout')), 3000)
+        setTimeout(() => reject(new Error('Query timeout')), 5000)
       );
 
       const queryPromise = supabase
         .from('terra_data_payloads')
         .select('id, type, data, created_at')
         .eq('reference_id', userId)
-        .gte('created_at', fourteenDaysAgo)
+        .gte('created_at', thirtyDaysAgo)
         .order('created_at', { ascending: false })
-        .limit(14)
+        .limit(50) // Need enough to get all data types (sleep, daily, body, etc.)
         .then(res => {
           if (res.error) throw res.error;
           return res.data as TerraPayload[];
