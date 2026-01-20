@@ -207,7 +207,11 @@ export default function HomePage() {
           <h2 className="text-sm font-medium text-[#8A8580] uppercase tracking-wider mb-3 px-1">
             Today&apos;s Metrics
           </h2>
-          <HealthMetricsDashboard userId={profile.id} />
+          <HealthMetricsDashboard
+            userId={profile.id}
+            initialMetrics={healthMetrics}
+            initialHasData={hasWearable}
+          />
         </div>
 
         {/* Add Data CTA */}

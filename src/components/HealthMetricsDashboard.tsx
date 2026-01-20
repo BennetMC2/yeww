@@ -6,6 +6,8 @@ import { HealthMetrics } from '@/types';
 
 interface HealthMetricsDashboardProps {
   userId: string;
+  initialMetrics?: HealthMetrics | null;
+  initialHasData?: boolean;
 }
 
 type TrendDirection = 'up' | 'down' | 'stable';
@@ -79,11 +81,11 @@ function MetricCard({
   );
 }
 
-export default function HealthMetricsDashboard({ userId }: HealthMetricsDashboardProps) {
-  const [metrics, setMetrics] = useState<HealthMetrics | null>(null);
+export default function HealthMetricsDashboard({ userId, initialMetrics, initialHasData }: HealthMetricsDashboardProps) {
+  const [metrics, setMetrics] = useState<HealthMetrics | null>(initialMetrics ?? null);
   const [lastSync, setLastSync] = useState<string | null>(null);
-  const [hasData, setHasData] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [hasData, setHasData] = useState(initialHasData ?? false);
+  const [isLoading, setIsLoading] = useState(initialMetrics === undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,9 +113,12 @@ export default function HealthMetricsDashboard({ userId }: HealthMetricsDashboar
     }
   }, [userId]);
 
+  // Only fetch on mount if no initial data was provided
   useEffect(() => {
-    fetchMetrics();
-  }, [fetchMetrics]);
+    if (initialMetrics === undefined) {
+      fetchMetrics();
+    }
+  }, [fetchMetrics, initialMetrics]);
 
   const formatLastSync = (timestamp: string | null) => {
     if (!timestamp) return 'Never';
