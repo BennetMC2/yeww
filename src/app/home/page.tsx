@@ -1,25 +1,42 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Flame, ChevronRight } from 'lucide-react';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
-import HealthScoreGauge from '@/components/scores/HealthScoreGauge';
-import ReputationBadge from '@/components/scores/ReputationBadge';
-import PointsDisplay from '@/components/scores/PointsDisplay';
 import HealthMetricsDashboard from '@/components/HealthMetricsDashboard';
+import DailyInsightCard from '@/components/home/DailyInsightCard';
+import HealthScoreWithTrend from '@/components/home/HealthScoreWithTrend';
+import ProgressFooter from '@/components/home/ProgressFooter';
+import AddDataCTA from '@/components/home/AddDataCTA';
+import SmartCheckInCard from '@/components/home/SmartCheckInCard';
 import { useApp } from '@/contexts/AppContext';
-import { PRIORITIES } from '@/types';
-
-type CheckInResponse = 'great' | 'okay' | 'rough' | null;
+import { DailyInsight, HealthScoreTrend, HealthMetrics } from '@/types';
+import { generateCheckInContext, CheckInContext } from '@/lib/checkInContext';
+import { calculateStreakBonus, POINTS_CONFIG } from '@/lib/scores';
+import { hasConnectedDevices } from '@/lib/healthData';
 
 export default function HomePage() {
   const router = useRouter();
   const { profile, isLoading, recordCheckIn, addMessage, recalculateScores } = useApp();
-  const [selectedResponse, setSelectedResponse] = useState<CheckInResponse>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
+
+  // New state for insights and trends
+  const [dailyInsight, setDailyInsight] = useState<DailyInsight | null>(null);
+  const [scoreTrend, setScoreTrend] = useState<HealthScoreTrend | null>(null);
+  const [checkInContext, setCheckInContext] = useState<CheckInContext | null>(null);
+  const [healthMetrics, setHealthMetrics] = useState<HealthMetrics | null>(null);
+  const [hasWearable, setHasWearable] = useState(false);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(true);
+  const [checkedInToday, setCheckedInToday] = useState(false);
+
+  // Check if already checked in today
+  useEffect(() => {
+    if (profile?.lastCheckIn) {
+      const lastCheckIn = new Date(profile.lastCheckIn);
+      const now = new Date();
+      setCheckedInToday(lastCheckIn.toDateString() === now.toDateString());
+    }
+  }, [profile?.lastCheckIn]);
 
   // Redirect to onboarding if not completed
   useEffect(() => {
@@ -35,228 +52,186 @@ export default function HomePage() {
     }
   }, [profile?.onboardingCompleted, recalculateScores]);
 
-  const getGreeting = () => {
-    const name = profile?.name || 'there';
-    const lastCheckIn = profile?.lastCheckIn ? new Date(profile.lastCheckIn) : null;
-    const now = new Date();
+  // Fetch insights, trends, and metrics
+  const fetchHomeData = useCallback(async () => {
+    if (!profile?.id) return;
 
-    // Check if already checked in today
-    const checkedInToday = lastCheckIn &&
-      lastCheckIn.toDateString() === now.toDateString();
+    setIsLoadingInsights(true);
 
-    if (checkedInToday) {
-      return `Hey ${name}, good to see you back.`;
-    }
+    try {
+      // Fetch all data in parallel
+      const [insightRes, historyRes, metricsRes, hasDevice] = await Promise.all([
+        fetch(`/api/insights/daily?userId=${encodeURIComponent(profile.id)}`),
+        fetch(`/api/health/score-history?userId=${encodeURIComponent(profile.id)}`),
+        fetch(`/api/health/metrics?userId=${encodeURIComponent(profile.id)}`),
+        hasConnectedDevices(profile.id),
+      ]);
 
-    // Check if it's been a while
-    if (lastCheckIn) {
-      const daysDiff = Math.floor((now.getTime() - lastCheckIn.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysDiff > 3) {
-        return `Hey ${name}, been a few days. How's everything going?`;
+      // Process responses
+      if (insightRes.ok) {
+        const data = await insightRes.json();
+        setDailyInsight(data.insight);
       }
+
+      if (historyRes.ok) {
+        const data = await historyRes.json();
+        setScoreTrend(data.scoreTrend);
+      }
+
+      if (metricsRes.ok) {
+        const data = await metricsRes.json();
+        setHealthMetrics(data.metrics);
+
+        // Generate check-in context based on metrics
+        const context = generateCheckInContext(
+          data.metrics,
+          profile.checkInStreak,
+          profile.lastCheckIn
+        );
+        setCheckInContext(context);
+      } else {
+        // Generate default check-in context
+        const context = generateCheckInContext(
+          null,
+          profile.checkInStreak,
+          profile.lastCheckIn
+        );
+        setCheckInContext(context);
+      }
+
+      setHasWearable(hasDevice);
+    } catch (error) {
+      console.error('Error fetching home data:', error);
+      // Set fallback check-in context
+      const context = generateCheckInContext(
+        null,
+        profile?.checkInStreak ?? 0,
+        profile?.lastCheckIn ?? null
+      );
+      setCheckInContext(context);
+    } finally {
+      setIsLoadingInsights(false);
     }
+  }, [profile?.id, profile?.checkInStreak, profile?.lastCheckIn]);
 
-    return `GM, ${name}. How are you feeling?`;
-  };
-
-  const getFeedbackMessage = (response: CheckInResponse) => {
-    switch (response) {
-      case 'great':
-        return "That's great to hear! Keep it up.";
-      case 'okay':
-        return "Thanks for sharing. I'm here if you want to talk more.";
-      case 'rough':
-        return "I'm sorry to hear that. I'm here for you if you want to chat.";
-      default:
-        return '';
+  useEffect(() => {
+    if (profile?.onboardingCompleted) {
+      fetchHomeData();
     }
-  };
+  }, [profile?.onboardingCompleted, fetchHomeData]);
 
-  const handleCheckIn = (response: CheckInResponse) => {
-    setSelectedResponse(response);
+  // Handle check-in
+  const handleCheckIn = (value: string) => {
     recordCheckIn();
+    setCheckedInToday(true);
 
-    // Add messages to conversation
-    const responseText = response === 'great' ? "I'm feeling great!" :
-      response === 'okay' ? "I'm feeling okay." :
-        "I'm having a rough day.";
+    // Map value to user message
+    const option = checkInContext?.options.find(o => o.value === value);
+    const responseText = option
+      ? `${option.emoji || ''} ${option.label}`.trim()
+      : value;
+
     addMessage('user', responseText);
-    addMessage('assistant', getFeedbackMessage(response));
 
-    setShowFeedback(true);
+    // Get response message
+    const { getCheckInResponse } = require('@/lib/checkInContext');
+    const feedbackMessage = getCheckInResponse(value, checkInContext?.contextType || 'default');
+    addMessage('assistant', feedbackMessage);
   };
 
-  // Get smart nudge based on profile
-  const getSmartNudge = () => {
-    if (!profile) return null;
-
-    // If streak is 0 or 1, encourage consistency
-    if (profile.checkInStreak <= 1) {
-      return "Check in daily to build your streak and improve your Health Score.";
-    }
-
-    // If no data sources connected
-    if (profile.dataSources.length === 0) {
-      return "Connect a health app to get more accurate insights.";
-    }
-
-    // Reference priorities
-    if (profile.priorities.length > 0) {
-      const priority = PRIORITIES.find(p => p.id === profile.priorities[0]);
-      if (priority) {
-        return `Working on "${priority.name.toLowerCase()}" — let's talk about your progress.`;
-      }
-    }
-
-    return null;
-  };
+  // Calculate streak bonus
+  const streakBonus = profile ? calculateStreakBonus(profile.checkInStreak + 1) : 0;
 
   if (isLoading || !profile?.onboardingCompleted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF6F1]">
-        <p className="text-[#B5AFA8]">Loading...</p>
+      <div className="min-h-screen flex flex-col bg-[#FAF6F1] pb-20">
+        {/* Header skeleton */}
+        <div className="px-6 pt-4 pb-2">
+          <div className="flex items-center justify-between">
+            <div className="skeleton w-16 h-6 rounded-lg" />
+            <div className="skeleton w-8 h-8 rounded-full" />
+          </div>
+        </div>
+
+        <main className="flex-1 flex flex-col px-6 pt-4 space-y-4">
+          {/* Insight skeleton */}
+          <div className="skeleton h-20 rounded-2xl" />
+
+          {/* Health Score skeleton */}
+          <div className="flex flex-col items-center py-4">
+            <div className="skeleton w-[200px] h-[200px] rounded-full" />
+            <div className="skeleton w-24 h-6 rounded-full mt-3" />
+          </div>
+
+          {/* Metrics section skeleton */}
+          <div className="skeleton h-32 rounded-2xl" />
+
+          {/* CTA skeleton */}
+          <div className="skeleton h-20 rounded-2xl" />
+
+          {/* Check-in skeleton */}
+          <div className="skeleton h-40 rounded-2xl" />
+
+          {/* Progress footer skeleton */}
+          <div className="skeleton h-24 rounded-2xl" />
+        </main>
+
+        <BottomNav />
       </div>
     );
   }
-
-  const smartNudge = getSmartNudge();
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF6F1] pb-20">
       <Header />
 
-      <main className="flex-1 flex flex-col px-6 pt-4">
-        {/* Health Score Section */}
-        <div className="flex flex-col items-center mb-6">
-          <HealthScoreGauge
-            score={profile.healthScore}
-            size="lg"
-            animated={false}
-            onClick={() => router.push('/health')}
-          />
-          <p className="text-xs text-[#8A8580] mt-2">Tap to see breakdown</p>
-        </div>
+      <main className="flex-1 flex flex-col px-6 pt-4 space-y-4">
+        {/* Daily Insight Card */}
+        <DailyInsightCard
+          insight={dailyInsight}
+          isLoading={isLoadingInsights}
+        />
 
-        {/* Quick Stats Row */}
-        <div className="flex justify-center gap-6 mb-8">
-          {/* Points */}
-          <div className="flex flex-col items-center">
-            <PointsDisplay points={profile.points} size="md" />
-            <p className="text-xs text-[#8A8580] mt-1">Points</p>
-          </div>
-
-          {/* Streak */}
-          <div className="flex flex-col items-center">
-            <div className="flex items-center gap-1.5">
-              <Flame className="w-5 h-5 text-[#E07A5F]" />
-              <span className="text-lg font-semibold text-[#2D2A26]">{profile.checkInStreak}</span>
-            </div>
-            <p className="text-xs text-[#8A8580] mt-1">Streak</p>
-          </div>
-
-          {/* Reputation */}
-          <div className="flex flex-col items-center">
-            <ReputationBadge level={profile.reputationLevel} size="md" showLabel={false} />
-            <p className="text-xs text-[#8A8580] mt-1">{profile.reputationLevel}</p>
-          </div>
-        </div>
+        {/* Health Score with Trend */}
+        <HealthScoreWithTrend
+          score={profile.healthScore}
+          trend={scoreTrend}
+          onClick={() => router.push('/health')}
+          isLoading={isLoadingInsights}
+        />
 
         {/* Health Metrics Dashboard */}
-        <div className="mb-6">
+        <div>
           <h2 className="text-sm font-medium text-[#8A8580] uppercase tracking-wider mb-3 px-1">
             Today&apos;s Metrics
           </h2>
           <HealthMetricsDashboard userId={profile.id} />
         </div>
 
-        {/* Daily Check-in Card */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-          {!showFeedback ? (
-            <>
-              {/* AI Greeting */}
-              <p className="text-lg text-[#2D2A26] leading-relaxed mb-4">{getGreeting()}</p>
+        {/* Add Data CTA */}
+        <AddDataCTA
+          dataSources={profile.dataSources}
+          hasWearable={hasWearable}
+        />
 
-              {/* Quick Responses */}
-              <div className="flex flex-wrap gap-2 mb-3">
-                <button
-                  onClick={() => handleCheckIn('great')}
-                  className="px-5 py-2.5 rounded-full bg-[#F5EDE4] text-[#2D2A26] font-medium hover:bg-[#EBE3DA] transition-colors"
-                >
-                  Great
-                </button>
-                <button
-                  onClick={() => handleCheckIn('okay')}
-                  className="px-5 py-2.5 rounded-full bg-[#F5EDE4] text-[#2D2A26] font-medium hover:bg-[#EBE3DA] transition-colors"
-                >
-                  Okay
-                </button>
-                <button
-                  onClick={() => handleCheckIn('rough')}
-                  className="px-5 py-2.5 rounded-full bg-[#F5EDE4] text-[#2D2A26] font-medium hover:bg-[#EBE3DA] transition-colors"
-                >
-                  Rough
-                </button>
-              </div>
-
-              <Link
-                href="/chat"
-                className="text-[#8A8580] hover:text-[#2D2A26] transition-colors text-sm"
-              >
-                Or tell me more...
-              </Link>
-            </>
-          ) : (
-            <div className="space-y-4">
-              {/* User response bubble */}
-              <div className="flex justify-end">
-                <div className="max-w-[85%] bg-[#FFE8DC] rounded-2xl rounded-br-sm px-4 py-2.5">
-                  <p className="text-[#2D2A26]">
-                    {selectedResponse === 'great' ? "I'm feeling great!" :
-                      selectedResponse === 'okay' ? "I'm feeling okay." :
-                        "I'm having a rough day."}
-                  </p>
-                </div>
-              </div>
-
-              {/* AI feedback */}
-              <p className="text-[#2D2A26] leading-relaxed">
-                {getFeedbackMessage(selectedResponse)}
-              </p>
-
-              {/* Points earned notification */}
-              <div className="flex items-center gap-2 text-sm text-[#4ADE80]">
-                <span>+10 points earned</span>
-                {profile.checkInStreak > 3 && (
-                  <span>+{(profile.checkInStreak - 3) * 5} streak bonus</span>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-1">
-                <button
-                  onClick={() => setShowFeedback(false)}
-                  className="flex-1 px-5 py-3 rounded-full bg-[#F5EDE4] text-[#2D2A26] font-medium hover:bg-[#EBE3DA] transition-colors"
-                >
-                  Done
-                </button>
-                <Link href="/chat" className="flex-1">
-                  <button className="w-full px-5 py-3 rounded-full bg-[#E07A5F] text-white font-medium hover:bg-[#D36B4F] transition-colors">
-                    Keep chatting
-                  </button>
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Smart Nudge */}
-        {smartNudge && !showFeedback && (
-          <Link href="/chat">
-            <div className="bg-[#FFE8DC] rounded-2xl p-4 flex items-center justify-between">
-              <p className="text-sm text-[#2D2A26] flex-1">{smartNudge}</p>
-              <ChevronRight className="w-5 h-5 text-[#E07A5F] flex-shrink-0 ml-2" />
-            </div>
-          </Link>
+        {/* Smart Check-in Card */}
+        {checkInContext && (
+          <SmartCheckInCard
+            checkInContext={checkInContext}
+            onCheckIn={handleCheckIn}
+            pointsEarned={POINTS_CONFIG.CHECK_IN}
+            streakBonus={streakBonus}
+            alreadyCheckedIn={checkedInToday}
+          />
         )}
+
+        {/* Progress Footer */}
+        <ProgressFooter
+          streak={profile.checkInStreak}
+          points={profile.points}
+          reputationLevel={profile.reputationLevel}
+          reputationPoints={profile.reputationPoints}
+        />
       </main>
 
       <BottomNav />

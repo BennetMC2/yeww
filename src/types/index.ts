@@ -1,3 +1,8 @@
+// Re-export types from lib files for convenience
+export type { DailyInsight, InsightSentiment } from '@/lib/insightGenerator';
+export type { CheckInContext, CheckInOption } from '@/lib/checkInContext';
+export type { HealthScoreTrend, MetricTrend, MetricTrends } from '@/lib/healthHistory';
+
 export type CoachingStyle = 'direct' | 'supportive' | 'balanced';
 
 export type ConnectedApp = 'apple-health' | 'oura' | 'whoop' | 'garmin' | 'fitbit';
@@ -238,7 +243,13 @@ export interface SessionContext {
   conversationTurn: number;
 }
 
+export type HealthProvider = 'GARMIN' | 'WHOOP' | 'OURA' | 'FITBIT' | 'APPLE' | 'GOOGLE' | 'UNKNOWN';
+
 export interface HealthMetrics {
+  // Provider context
+  provider?: HealthProvider;
+
+  // Common metrics
   hrv?: {
     current: number;
     baseline: number;
@@ -248,6 +259,7 @@ export interface HealthMetrics {
     lastNightHours: number;
     quality: 'poor' | 'fair' | 'good' | 'excellent';
     avgWeekHours: number;
+    sleepDate?: string; // ISO date of the sleep night
   };
   rhr?: {
     current: number;
@@ -257,15 +269,28 @@ export interface HealthMetrics {
   recovery?: {
     score: number;
     status: 'low' | 'moderate' | 'high';
-  };
-  strain?: {
-    yesterday: number;
-    weeklyAvg: number;
+    label: string; // "Body Battery", "Recovery", "Readiness" depending on provider
   };
   steps?: {
     today: number;
     avgDaily: number;
   };
+
+  // Garmin-specific: Stress (not strain)
+  stress?: {
+    level: number; // 0-100, lower is calmer
+    category: 'rest' | 'low' | 'medium' | 'high';
+  };
+
+  // Whoop-specific: Strain
+  strain?: {
+    score: number;
+    weeklyAvg: number;
+  };
+
+  // Fitness metrics
+  fitnessAge?: number;
+  vo2Max?: number; // ml/kg/min - if available
 }
 
 export interface DetectedPattern {
