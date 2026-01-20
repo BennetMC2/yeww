@@ -14,7 +14,6 @@ import { useApp } from '@/contexts/AppContext';
 import { DailyInsight, HealthScoreTrend, HealthMetrics } from '@/types';
 import { generateCheckInContext, CheckInContext } from '@/lib/checkInContext';
 import { calculateStreakBonus, POINTS_CONFIG } from '@/lib/scores';
-import { hasConnectedDevices } from '@/lib/healthData';
 
 export default function HomePage() {
   const router = useRouter();
@@ -60,11 +59,10 @@ export default function HomePage() {
 
     try {
       // Fetch all data in parallel
-      const [insightRes, historyRes, metricsRes, hasDevice] = await Promise.all([
+      const [insightRes, historyRes, metricsRes] = await Promise.all([
         fetch(`/api/insights/daily?userId=${encodeURIComponent(profile.id)}`),
         fetch(`/api/health/score-history?userId=${encodeURIComponent(profile.id)}`),
         fetch(`/api/health/metrics?userId=${encodeURIComponent(profile.id)}`),
-        hasConnectedDevices(profile.id),
       ]);
 
       // Process responses
@@ -78,9 +76,11 @@ export default function HomePage() {
         setScoreTrend(data.scoreTrend);
       }
 
+      let hasDevice = false;
       if (metricsRes.ok) {
         const data = await metricsRes.json();
         setHealthMetrics(data.metrics);
+        hasDevice = data.hasData;
 
         // Generate check-in context based on metrics
         const context = generateCheckInContext(
