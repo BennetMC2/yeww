@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { ArrowUp, Camera, ImagePlus, X } from 'lucide-react';
 import Image from 'next/image';
 import BottomNav from '@/components/BottomNav';
+import ProactiveInsightCard from '@/components/ProactiveInsightCard';
 import { useApp } from '@/contexts/AppContext';
-import { Message, MessageImage } from '@/types';
+import { Message, MessageImage, ProactiveInsight } from '@/types';
 import { compressImage } from '@/lib/imageUtils';
 
 export default function ChatPage() {
   const router = useRouter();
-  const { profile, conversations, addMessage, isLoading } = useApp();
+  const { profile, conversations, addMessage, isLoading, proactiveInsights, fetchProactiveInsights, dismissInsight } = useApp();
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
@@ -26,6 +27,13 @@ export default function ChatPage() {
       router.replace('/onboarding');
     }
   }, [isLoading, profile, router]);
+
+  // Fetch proactive insights on mount
+  useEffect(() => {
+    if (profile?.onboardingCompleted) {
+      fetchProactiveInsights();
+    }
+  }, [profile?.onboardingCompleted, fetchProactiveInsights]);
 
   useEffect(() => {
     const allMessages = conversations.conversations.flatMap(c => c.messages);
@@ -162,6 +170,23 @@ export default function ChatPage() {
     }
   };
 
+  // Handle discussing a proactive insight
+  const handleDiscussInsight = (insight: ProactiveInsight) => {
+    // Generate a contextual prompt based on the insight type
+    let discussPrompt = '';
+    if (insight.type === 'concern') {
+      discussPrompt = `Tell me more about what might be affecting my metrics. ${insight.message}`;
+    } else if (insight.type === 'milestone') {
+      discussPrompt = `What should I do to keep this momentum going? You mentioned: ${insight.message}`;
+    } else {
+      discussPrompt = `Can you tell me more about this? ${insight.message}`;
+    }
+
+    setInputValue(discussPrompt);
+    dismissInsight(insight.id);
+    inputRef.current?.focus();
+  };
+
   if (isLoading || !profile?.onboardingCompleted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAF6F1]">
@@ -179,8 +204,22 @@ export default function ChatPage() {
 
       {/* Messages */}
       <main className="flex-1 overflow-y-auto px-6">
+        {/* Proactive Insights */}
+        {proactiveInsights.length > 0 && (
+          <div className="pt-4">
+            {proactiveInsights.map((insight) => (
+              <ProactiveInsightCard
+                key={insight.id}
+                insight={insight}
+                onDismiss={dismissInsight}
+                onDiscuss={handleDiscussInsight}
+              />
+            ))}
+          </div>
+        )}
+
         {localMessages.length === 0 ? (
-          <div className="h-full flex items-center">
+          <div className={`${proactiveInsights.length > 0 ? 'pt-4' : 'h-full'} flex items-center`}>
             <div>
               <p className="text-2xl text-[#2D2A26] leading-relaxed mb-6">
                 Hey {profile.name}. What&apos;s on your mind?

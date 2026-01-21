@@ -300,6 +300,21 @@ export interface DetectedPattern {
   lastTriggered: string;
 }
 
+// Proactive insight types
+export type ProactiveInsightType = 'notable_change' | 'pattern' | 'milestone' | 'concern';
+export type ProactiveInsightPriority = 'high' | 'medium' | 'low';
+
+export interface ProactiveInsight {
+  id: string;
+  userId: string;
+  message: string;
+  type: ProactiveInsightType;
+  priority: ProactiveInsightPriority;
+  dataContext?: Record<string, unknown>;
+  createdAt: string;
+  read: boolean;
+}
+
 export interface PromptContext {
   userProfile: UserProfile;
   session: SessionContext;

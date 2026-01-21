@@ -18,6 +18,7 @@ import {
   HealthMetrics,
   DailyInsight,
   HealthScoreTrend,
+  ProactiveInsight,
 } from '@/types';
 import {
   getUserProfile,
@@ -103,6 +104,12 @@ interface AppContextType {
   fetchHomeData: (forceRefresh?: boolean) => Promise<HomeDataCache | null>;
   isLoadingHomeData: boolean;
 
+  // Proactive insights
+  proactiveInsights: ProactiveInsight[];
+  fetchProactiveInsights: () => Promise<void>;
+  dismissInsight: (insightId: string) => Promise<void>;
+  dismissAllInsights: () => Promise<void>;
+
   // Reset
   resetAll: () => void;
 }
@@ -116,6 +123,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [homeDataCache, setHomeDataCache] = useState<HomeDataCache | null>(null);
   const [isLoadingHomeData, setIsLoadingHomeData] = useState(false);
+  const [proactiveInsights, setProactiveInsights] = useState<ProactiveInsight[]>([]);
 
   // Load data on mount
   useEffect(() => {
@@ -374,8 +382,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setConversations({ conversations: [] });
       setProgress({ entries: [] });
       setHomeDataCache(null);
+      setProactiveInsights([]);
     });
   }, []);
+
+  // Proactive insights management
+  const fetchProactiveInsights = useCallback(async () => {
+    if (!profile?.id) return;
+
+    try {
+      const response = await fetch(`/api/proactive-insights?userId=${encodeURIComponent(profile.id)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setProactiveInsights(data.insights || []);
+      }
+    } catch (error) {
+      console.error('Error fetching proactive insights:', error);
+    }
+  }, [profile?.id]);
+
+  const dismissInsight = useCallback(async (insightId: string) => {
+    try {
+      const response = await fetch('/api/proactive-insights', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ insightId }),
+      });
+
+      if (response.ok) {
+        setProactiveInsights(prev => prev.filter(i => i.id !== insightId));
+      }
+    } catch (error) {
+      console.error('Error dismissing insight:', error);
+    }
+  }, []);
+
+  const dismissAllInsights = useCallback(async () => {
+    if (!profile?.id) return;
+
+    try {
+      const response = await fetch('/api/proactive-insights', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: profile.id, dismissAll: true }),
+      });
+
+      if (response.ok) {
+        setProactiveInsights([]);
+      }
+    } catch (error) {
+      console.error('Error dismissing all insights:', error);
+    }
+  }, [profile?.id]);
 
   return (
     <AppContext.Provider
@@ -411,6 +469,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         homeDataCache,
         fetchHomeData,
         isLoadingHomeData,
+        // Proactive insights
+        proactiveInsights,
+        fetchProactiveInsights,
+        dismissInsight,
+        dismissAllInsights,
         // Reset
         resetAll,
       }}

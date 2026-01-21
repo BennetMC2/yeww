@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature, TerraWebhookPayload } from '@/lib/terra';
 import { supabase } from '@/lib/supabase';
+import { processNewHealthData } from '@/lib/proactiveInsight';
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,6 +102,22 @@ export async function POST(request: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq('user_id', user.user_id);
+
+          // Trigger proactive insight generation for sleep and daily data
+          // Use the most recent data item and run async (don't block webhook response)
+          if (['sleep', 'daily'].includes(payload.type) && user.reference_id && payload.data.length > 0) {
+            const latestData = payload.data[payload.data.length - 1];
+            // Fire and forget - don't await to keep webhook response fast
+            processNewHealthData(user.reference_id, payload.type, latestData)
+              .then(insight => {
+                if (insight) {
+                  console.log(`Proactive insight generated for ${user.reference_id}:`, insight.message);
+                }
+              })
+              .catch(err => {
+                console.error('Error generating proactive insight:', err);
+              });
+          }
         }
         break;
 

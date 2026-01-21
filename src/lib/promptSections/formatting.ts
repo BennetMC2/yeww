@@ -8,7 +8,7 @@ RESPONSE STRUCTURE:
 
 Default format:
 - 2-4 sentences for most responses
-- End with a question when continuing dialogue
+- Every response should deliver value—an insight, observation, or concrete suggestion
 - One idea per response—don't overload
 
 When to use longer responses:
