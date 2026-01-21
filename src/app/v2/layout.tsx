@@ -53,9 +53,26 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
           </div>
           <button
             onClick={() => setShowProfile(true)}
-            className="w-10 h-10 rounded-full bg-[#FFE8DC] flex items-center justify-center text-lg font-medium text-[#E07A5F] hover:bg-[#FFD9C7] transition-colors"
+            className="relative flex items-center gap-2 group"
           >
-            {displayProfile.name.charAt(0).toUpperCase()}
+            {/* Health score teaser */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/80 shadow-sm group-hover:bg-white transition-colors">
+              <span className="text-xs font-semibold text-[#2D2A26]">{displayProfile.healthScore}</span>
+              <span className="text-[10px] text-[#8A8580]">score</span>
+            </div>
+            {/* Avatar with pulse ring */}
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-[#E07A5F]/20 animate-ping" style={{ animationDuration: '2s' }} />
+              <div className="relative w-10 h-10 rounded-full bg-[#FFE8DC] flex items-center justify-center text-lg font-medium text-[#E07A5F] group-hover:bg-[#FFD9C7] transition-colors">
+                {displayProfile.name.charAt(0).toUpperCase()}
+              </div>
+              {/* Streak badge */}
+              {displayProfile.checkInStreak > 0 && (
+                <div className="absolute -bottom-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full bg-[#E07A5F] text-white text-[10px] font-bold shadow-sm">
+                  {displayProfile.checkInStreak}
+                </div>
+              )}
+            </div>
           </button>
         </div>
       </header>
