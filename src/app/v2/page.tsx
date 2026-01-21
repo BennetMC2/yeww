@@ -6,7 +6,36 @@ import { useApp } from '@/contexts/AppContext';
 import MorningBrief from '@/components/v2/MorningBrief';
 import ExpandableStats from '@/components/v2/ExpandableStats';
 import ProactiveInsightCard from '@/components/ProactiveInsightCard';
-import { ProactiveInsight } from '@/types';
+import { ProactiveInsight, HealthMetrics } from '@/types';
+
+// Mock metrics for demo
+const MOCK_METRICS: HealthMetrics = {
+  provider: 'GARMIN',
+  sleep: {
+    lastNightHours: 7.4,
+    quality: 'good',
+    avgWeekHours: 6.8,
+  },
+  recovery: {
+    score: 76,
+    status: 'high',
+    label: 'Body Battery',
+  },
+  hrv: {
+    current: 48,
+    baseline: 52,
+    trend: 'down',
+  },
+  rhr: {
+    current: 58,
+    baseline: 54,
+    trend: 'up',
+  },
+  steps: {
+    today: 4200,
+    avgDaily: 8100,
+  },
+};
 
 export default function TodayPage() {
   const router = useRouter();
@@ -75,6 +104,9 @@ export default function TodayPage() {
     checkInStreak: 5,
   };
 
+  // Use mock metrics if no real data
+  const displayMetrics = homeDataCache?.metrics ?? MOCK_METRICS;
+
   return (
     <div className="px-6 pb-6 space-y-4">
       {/* Proactive Insights */}
@@ -94,14 +126,14 @@ export default function TodayPage() {
       {/* Morning Brief */}
       <MorningBrief
         name={displayProfile.name}
-        metrics={homeDataCache?.metrics ?? null}
-        isLoading={isLoadingHomeData && !homeDataCache}
+        metrics={displayMetrics}
+        isLoading={false}
       />
 
       {/* Expandable Stats */}
       <ExpandableStats
-        metrics={homeDataCache?.metrics ?? null}
-        isLoading={isLoadingHomeData && !homeDataCache}
+        metrics={displayMetrics}
+        isLoading={false}
         onMetricTap={handleMetricTap}
       />
 
