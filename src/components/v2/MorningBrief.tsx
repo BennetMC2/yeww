@@ -26,7 +26,14 @@ function getGreeting(timeOfDay: string): string {
   }
 }
 
-function generateBrief(name: string, metrics: HealthMetrics | null): { greeting: string; message: string; highlight?: string } {
+interface BriefResult {
+  greeting: string;
+  message: string;
+  tip?: string;
+  highlight?: string;
+}
+
+function generateBrief(name: string, metrics: HealthMetrics | null): BriefResult {
   const timeOfDay = getTimeOfDay();
   const greeting = `${getGreeting(timeOfDay)}, ${name}.`;
 
@@ -38,55 +45,91 @@ function generateBrief(name: string, metrics: HealthMetrics | null): { greeting:
   }
 
   const parts: string[] = [];
+  let tip: string | undefined;
   let highlight: string | undefined;
 
-  // Sleep commentary
+  // Build a comprehensive brief that reads like a knowledgeable friend
+
+  // Sleep commentary - more detailed
   if (metrics.sleep) {
     const hours = metrics.sleep.lastNightHours;
-    if (hours >= 7.5) {
-      parts.push(`Sleep was solid last night—${hours} hours, ${metrics.sleep.quality} quality.`);
+    const quality = metrics.sleep.quality;
+    const avgWeek = metrics.sleep.avgWeekHours;
+
+    if (hours >= 7.5 && quality === 'excellent') {
+      parts.push(`Great night—${hours} hours with excellent quality. That's ${(hours - avgWeek).toFixed(1)}h above your weekly average.`);
+      tip = "Your body's in a good recovery window. Consider something more challenging today if you've been wanting to push.";
+    } else if (hours >= 7) {
+      parts.push(`Solid ${hours} hours of ${quality} sleep. Slightly above your ${avgWeek}h average.`);
+      tip = "You're well-rested. A good day for focused work or a moderate workout.";
     } else if (hours >= 6) {
-      parts.push(`You got ${hours} hours of sleep. Not bad, but there's room to improve.`);
+      parts.push(`You managed ${hours} hours. Not ideal, but you can work with it.`);
+      tip = "Consider a short power nap (20 min) early afternoon if energy dips.";
+      highlight = 'sleep';
     } else {
-      parts.push(`Only ${hours} hours of sleep last night. That might catch up with you today.`);
+      parts.push(`Rough night—only ${hours} hours. This might affect your focus and recovery.`);
+      tip = "Skip the intense workout today. Your body needs recovery more than gains right now.";
       highlight = 'sleep';
     }
   }
 
-  // Recovery commentary
-  if (metrics.recovery) {
+  // Recovery + HRV combined insight
+  if (metrics.recovery && metrics.hrv) {
+    const recoveryScore = metrics.recovery.score;
+    const hrvCurrent = metrics.hrv.current;
+    const hrvBaseline = metrics.hrv.baseline;
+    const hrvDiff = hrvCurrent - hrvBaseline;
+    const label = metrics.recovery.label || 'Recovery';
+
+    if (recoveryScore >= 75 && hrvDiff >= 0) {
+      parts.push(`${label} is strong at ${recoveryScore} and your HRV is tracking ${hrvDiff > 0 ? hrvDiff + 'ms above' : 'at'} baseline.`);
+    } else if (recoveryScore >= 60) {
+      parts.push(`${label} at ${recoveryScore}—moderate day ahead. HRV is ${hrvDiff >= 0 ? 'holding steady' : 'a bit below normal'}.`);
+    } else {
+      parts.push(`${label}'s at ${recoveryScore}${hrvDiff < -5 ? ' and HRV is down' : ''}. Your body's asking for rest.`);
+      highlight = highlight || 'recovery';
+    }
+  } else if (metrics.recovery) {
     const score = metrics.recovery.score;
     const label = metrics.recovery.label || 'Recovery';
     if (score >= 70) {
-      parts.push(`${label}'s at ${score}—good day to push if you want to.`);
+      parts.push(`${label}'s at ${score}—green light to push if you want to.`);
     } else if (score >= 40) {
       parts.push(`${label}'s at ${score}. Moderate day—listen to your body.`);
     } else {
-      parts.push(`${label}'s low at ${score}. Might be worth taking it easy.`);
+      parts.push(`${label}'s low at ${score}. Worth taking it easy.`);
       highlight = highlight || 'recovery';
     }
   }
 
-  // RHR commentary (if concerning)
-  if (metrics.rhr && metrics.rhr.current > metrics.rhr.baseline + 3) {
-    const diff = metrics.rhr.current - metrics.rhr.baseline;
-    parts.push(`Your RHR is up ${diff} bpm from baseline. Worth watching.`);
-    highlight = highlight || 'rhr';
+  // RHR insight - only if notable
+  if (metrics.rhr) {
+    const current = metrics.rhr.current;
+    const baseline = metrics.rhr.baseline;
+    if (current < baseline - 2) {
+      parts.push(`Your resting heart rate dropped to ${current} bpm—a sign of good cardiovascular adaptation.`);
+    } else if (current > baseline + 3) {
+      const diff = current - baseline;
+      parts.push(`RHR is up ${diff} bpm. Could be stress, dehydration, or fighting something off.`);
+      tip = tip || "Hydrate extra today and consider if you're under more stress than usual.";
+      highlight = highlight || 'rhr';
+    }
   }
 
-  // HRV commentary (if concerning)
-  if (metrics.hrv && metrics.hrv.current < metrics.hrv.baseline * 0.85) {
-    parts.push(`HRV is down from your baseline—recovery might be taking a hit.`);
-    highlight = highlight || 'hrv';
+  // Steps context if notable
+  if (metrics.steps && metrics.steps.today > 8000) {
+    parts.push(`Already ${(metrics.steps.today / 1000).toFixed(1)}k steps in—nice momentum.`);
   }
 
   if (parts.length === 0) {
-    parts.push("Your metrics look stable today. Nothing unusual to flag.");
+    parts.push("Your metrics look balanced today. Nothing unusual to flag—steady state.");
+    tip = "Consistency is key. Keep doing what you're doing.";
   }
 
   return {
     greeting,
     message: parts.join(' '),
+    tip,
     highlight,
   };
 }
@@ -120,10 +163,20 @@ export default function MorningBrief({ name, metrics, isLoading }: MorningBriefP
       <p className="text-lg font-semibold text-[#2D2A26] mb-2">
         {brief.greeting}
       </p>
-      <p className="text-[#2D2A26] leading-relaxed mb-4">
+      <p className="text-[#2D2A26] leading-relaxed">
         {brief.message}
       </p>
-      <div className="flex gap-2">
+
+      {/* Actionable tip */}
+      {brief.tip && (
+        <div className="mt-3 p-3 bg-[#FFF8F5] rounded-xl border border-[#FFE8DC]">
+          <p className="text-sm text-[#2D2A26]">
+            <span className="font-medium text-[#E07A5F]">Tip:</span> {brief.tip}
+          </p>
+        </div>
+      )}
+
+      <div className="flex gap-2 mt-4">
         <button
           onClick={() => {}}
           className="px-4 py-2 rounded-full bg-[#F5EDE4] text-[#2D2A26] text-sm font-medium hover:bg-[#EBE3DA] transition-colors"

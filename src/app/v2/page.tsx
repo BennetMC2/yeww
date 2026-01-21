@@ -12,29 +12,44 @@ import { ProactiveInsight, HealthMetrics } from '@/types';
 const MOCK_METRICS: HealthMetrics = {
   provider: 'GARMIN',
   sleep: {
-    lastNightHours: 7.4,
-    quality: 'good',
-    avgWeekHours: 6.8,
+    lastNightHours: 7.8,
+    quality: 'excellent',
+    avgWeekHours: 6.9,
   },
   recovery: {
-    score: 76,
+    score: 82,
     status: 'high',
     label: 'Body Battery',
   },
   hrv: {
-    current: 48,
-    baseline: 52,
-    trend: 'down',
-  },
-  rhr: {
     current: 58,
-    baseline: 54,
+    baseline: 52,
     trend: 'up',
   },
-  steps: {
-    today: 4200,
-    avgDaily: 8100,
+  rhr: {
+    current: 54,
+    baseline: 56,
+    trend: 'down',
   },
+  steps: {
+    today: 8420,
+    avgDaily: 7200,
+  },
+  stress: {
+    level: 28,
+    category: 'low',
+  },
+};
+
+// Mock proactive insight for demo
+const MOCK_INSIGHT: ProactiveInsight = {
+  id: 'demo-insight-1',
+  userId: 'demo',
+  message: "Your sleep efficiency jumped 23% last night—best in two weeks. Whatever you did yesterday evening, it worked. Keep that bedtime routine going.",
+  type: 'notable_change',
+  priority: 'medium',
+  createdAt: new Date().toISOString(),
+  read: false,
 };
 
 export default function TodayPage() {
@@ -107,21 +122,22 @@ export default function TodayPage() {
   // Use mock metrics if no real data
   const displayMetrics = homeDataCache?.metrics ?? MOCK_METRICS;
 
+  // Use mock insight for demo if no real insights
+  const displayInsights = proactiveInsights.length > 0 ? proactiveInsights : [MOCK_INSIGHT];
+
   return (
     <div className="px-6 pb-6 space-y-4">
       {/* Proactive Insights */}
-      {proactiveInsights.length > 0 && (
-        <div>
-          {proactiveInsights.map((insight) => (
-            <ProactiveInsightCard
-              key={insight.id}
-              insight={insight}
-              onDismiss={dismissInsight}
-              onDiscuss={handleDiscussInsight}
-            />
-          ))}
-        </div>
-      )}
+      <div>
+        {displayInsights.map((insight) => (
+          <ProactiveInsightCard
+            key={insight.id}
+            insight={insight}
+            onDismiss={dismissInsight}
+            onDiscuss={handleDiscussInsight}
+          />
+        ))}
+      </div>
 
       {/* Morning Brief */}
       <MorningBrief

@@ -4,7 +4,47 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Award, FileText, Image as ImageIcon, Camera, X } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
-import { ProgressCategory } from '@/types';
+import { ProgressCategory, ProgressEntry } from '@/types';
+
+// Mock milestones for demo
+const MOCK_ENTRIES: ProgressEntry[] = [
+  {
+    id: 'demo-milestone-1',
+    type: 'milestone',
+    category: 'general',
+    date: new Date().toISOString(),
+    content: '7-day sleep streak! Averaged 7.5h for a full week.',
+  },
+  {
+    id: 'demo-note-1',
+    type: 'note',
+    category: 'general',
+    date: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+    content: 'Feeling more energized this week. The evening walks are really helping with sleep quality.',
+  },
+  {
+    id: 'demo-milestone-2',
+    type: 'milestone',
+    category: 'general',
+    date: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+    content: 'HRV hit personal best: 62ms!',
+  },
+  {
+    id: 'demo-photo-1',
+    type: 'photo',
+    category: 'body',
+    date: new Date(Date.now() - 86400000 * 5).toISOString(), // 5 days ago
+    content: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop',
+    note: 'Morning workout at the park. 30 min jog + stretching.',
+  },
+  {
+    id: 'demo-milestone-3',
+    type: 'milestone',
+    category: 'general',
+    date: new Date(Date.now() - 86400000 * 7).toISOString(), // 7 days ago
+    content: 'Started health journey with Longevity Guide!',
+  },
+];
 
 export default function JourneyPage() {
   const router = useRouter();
@@ -100,9 +140,12 @@ export default function JourneyPage() {
     { value: 'skin', label: 'Skin' },
   ];
 
-  // Calculate health score change
+  // Calculate health score change - use mock positive change for demo
   const scoreTrend = homeDataCache?.scoreTrend;
-  const scoreChange = scoreTrend?.change || 0;
+  const scoreChange = scoreTrend?.change || 8; // Default to +8% for demo
+
+  // Use mock entries if no real entries
+  const displayEntries = progress.entries.length > 0 ? progress.entries : MOCK_ENTRIES;
 
   return (
     <div className="px-6 pb-6">
@@ -116,21 +159,19 @@ export default function JourneyPage() {
             <p className="text-4xl font-bold text-[#2D2A26]">{displayProfile.healthScore}</p>
             <p className="text-sm text-[#8A8580]">current score</p>
           </div>
-          {scoreChange !== 0 && (
-            <div className={`text-right ${scoreChange > 0 ? 'text-green-600' : 'text-[#E07A5F]'}`}>
-              <p className="text-lg font-semibold">
-                {scoreChange > 0 ? '+' : ''}{scoreChange}%
-              </p>
-              <p className="text-xs text-[#8A8580]">vs last week</p>
-            </div>
-          )}
+          <div className={`text-right ${scoreChange > 0 ? 'text-green-600' : 'text-[#E07A5F]'}`}>
+            <p className="text-lg font-semibold">
+              {scoreChange > 0 ? '+' : ''}{scoreChange}%
+            </p>
+            <p className="text-xs text-[#8A8580]">vs last week</p>
+          </div>
         </div>
         {/* Simple trend visualization */}
         <div className="h-16 flex items-end gap-1">
           {[65, 68, 64, 70, 72, 69, displayProfile.healthScore].map((score, i) => (
             <div
               key={i}
-              className="flex-1 bg-[#FFE8DC] rounded-t transition-all"
+              className={`flex-1 rounded-t transition-all ${i === 6 ? 'bg-[#E07A5F]' : 'bg-[#FFE8DC]'}`}
               style={{ height: `${(score / 100) * 100}%` }}
             />
           ))}
@@ -154,9 +195,9 @@ export default function JourneyPage() {
         </button>
       </div>
 
-      {progress.entries.length > 0 ? (
+      {displayEntries.length > 0 ? (
         <div className="space-y-3">
-          {progress.entries.map((entry) => (
+          {displayEntries.map((entry) => (
             <div key={entry.id} className="bg-white rounded-2xl p-3">
               <div className="flex gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${entry.type === 'milestone' ? 'bg-[#FFE8DC]' : 'bg-[#F5EDE4]'}`}>
