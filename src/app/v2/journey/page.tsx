@@ -195,7 +195,7 @@ export default function JourneyPage() {
         </button>
       </div>
 
-      {displayEntries.length > 0 ? (
+      {progress.entries.length > 0 ? (
         <div className="space-y-3">
           {displayEntries.map((entry) => (
             <div key={entry.id} className="bg-white rounded-2xl p-3">
@@ -241,17 +241,53 @@ export default function JourneyPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#F5EDE4] flex items-center justify-center">
-            <Award className="w-8 h-8 text-[#8A8580]" />
+        <div className="bg-white rounded-2xl p-6">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#FFE8DC] flex items-center justify-center">
+              <Award className="w-8 h-8 text-[#E07A5F]" />
+            </div>
+            <h3 className="font-semibold text-[#2D2A26] mb-2">Your journey starts here</h3>
+            <p className="text-sm text-[#8A8580]">
+              Every expert was once a beginner. Let&apos;s build your health story together.
+            </p>
           </div>
-          <h3 className="font-semibold text-[#2D2A26] mb-2">Your journey starts here</h3>
-          <p className="text-sm text-[#8A8580] mb-4">Add a photo or note to mark the beginning.</p>
+
+          {/* Motivational points */}
+          <div className="space-y-3 mb-6">
+            <div className="flex items-start gap-3 p-3 bg-[#FAF6F1] rounded-xl">
+              <div className="w-8 h-8 rounded-full bg-[#FFE8DC] flex items-center justify-center flex-shrink-0 text-sm">
+                1
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[#2D2A26]">Consistency beats perfection</p>
+                <p className="text-xs text-[#8A8580]">Small daily actions compound into big results over time.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-[#FAF6F1] rounded-xl">
+              <div className="w-8 h-8 rounded-full bg-[#FFE8DC] flex items-center justify-center flex-shrink-0 text-sm">
+                2
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[#2D2A26]">Your data tells a story</p>
+                <p className="text-xs text-[#8A8580]">The more you track, the smarter your insights become.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-[#FAF6F1] rounded-xl">
+              <div className="w-8 h-8 rounded-full bg-[#FFE8DC] flex items-center justify-center flex-shrink-0 text-sm">
+                3
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[#2D2A26]">We&apos;re in this together</p>
+                <p className="text-xs text-[#8A8580]">I&apos;ll learn your patterns and help you optimize for longevity.</p>
+              </div>
+            </div>
+          </div>
+
           <button
             onClick={() => setShowAddMenu(true)}
-            className="px-5 py-2.5 rounded-full bg-[#E07A5F] text-white text-sm font-medium hover:bg-[#D36B4F] transition-colors"
+            className="w-full px-5 py-3 rounded-full bg-[#E07A5F] text-white text-sm font-medium hover:bg-[#D36B4F] transition-colors"
           >
-            Add first entry
+            Add your first entry
           </button>
         </div>
       )}
