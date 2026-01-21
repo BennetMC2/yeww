@@ -16,6 +16,8 @@ import {
   PointsTransaction,
   SharingPreferences,
   HealthMetrics,
+  DailyInsight,
+  HealthScoreTrend,
 } from '@/types';
 import {
   getUserProfile,
@@ -47,6 +49,18 @@ import {
   calculateStreakBonus,
 } from '@/lib/scores';
 import { getLatestHealthMetrics } from '@/lib/healthData';
+
+// Cached home page data
+interface HomeDataCache {
+  metrics: HealthMetrics | null;
+  hasWearable: boolean;
+  insight: DailyInsight | null;
+  scoreTrend: HealthScoreTrend | null;
+  fetchedAt: number;
+}
+
+// Cache duration: 2 minutes
+const HOME_CACHE_DURATION_MS = 2 * 60 * 1000;
 
 interface AppContextType {
   // User Profile
@@ -84,6 +98,11 @@ interface AppContextType {
   addProgressEntry: (entry: { type: 'photo' | 'milestone' | 'note'; category: 'body' | 'skin' | 'general'; content: string; note?: string }) => void;
   addMilestone: (content: string) => void;
 
+  // Home data cache
+  homeDataCache: HomeDataCache | null;
+  fetchHomeData: (forceRefresh?: boolean) => Promise<HomeDataCache | null>;
+  isLoadingHomeData: boolean;
+
   // Reset
   resetAll: () => void;
 }
@@ -95,6 +114,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [conversations, setConversations] = useState<ConversationHistory>({ conversations: [] });
   const [progress, setProgress] = useState<ProgressData>({ entries: [] });
   const [isLoading, setIsLoading] = useState(true);
+  const [homeDataCache, setHomeDataCache] = useState<HomeDataCache | null>(null);
+  const [isLoadingHomeData, setIsLoadingHomeData] = useState(false);
 
   // Load data on mount
   useEffect(() => {
@@ -263,6 +284,69 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await saveUserProfile(updated);
   }, [profile]);
 
+  // Fetch home page data with caching
+  const fetchHomeData = useCallback(async (forceRefresh = false): Promise<HomeDataCache | null> => {
+    if (!profile?.id) return null;
+
+    // Return cached data if still fresh (unless forcing refresh)
+    if (!forceRefresh && homeDataCache) {
+      const age = Date.now() - homeDataCache.fetchedAt;
+      if (age < HOME_CACHE_DURATION_MS) {
+        return homeDataCache;
+      }
+    }
+
+    setIsLoadingHomeData(true);
+
+    try {
+      // Fetch all home data in parallel
+      const [metricsRes, insightRes, historyRes] = await Promise.all([
+        fetch(`/api/health/metrics?userId=${encodeURIComponent(profile.id)}`),
+        fetch(`/api/insights/daily?userId=${encodeURIComponent(profile.id)}`),
+        fetch(`/api/health/score-history?userId=${encodeURIComponent(profile.id)}`),
+      ]);
+
+      let metrics: HealthMetrics | null = null;
+      let hasWearable = false;
+      let insight: DailyInsight | null = null;
+      let scoreTrend: HealthScoreTrend | null = null;
+
+      if (metricsRes.ok) {
+        const data = await metricsRes.json();
+        metrics = data.metrics;
+        hasWearable = data.hasData;
+        // Recalculate scores with fetched metrics
+        recalculateScores(metrics);
+      }
+
+      if (insightRes.ok) {
+        const data = await insightRes.json();
+        insight = data.insight;
+      }
+
+      if (historyRes.ok) {
+        const data = await historyRes.json();
+        scoreTrend = data.scoreTrend;
+      }
+
+      const cache: HomeDataCache = {
+        metrics,
+        hasWearable,
+        insight,
+        scoreTrend,
+        fetchedAt: Date.now(),
+      };
+
+      setHomeDataCache(cache);
+      return cache;
+    } catch (error) {
+      console.error('Error fetching home data:', error);
+      return homeDataCache; // Return stale cache on error
+    } finally {
+      setIsLoadingHomeData(false);
+    }
+  }, [profile?.id, homeDataCache, recalculateScores]);
+
   const addMessage = useCallback(async (role: 'assistant' | 'user', content: string, options?: { quickActions?: { label: string; value: string }[]; images?: MessageImage[] }) => {
     const message = await addMessageToStorage(role, content, options);
     const updatedConversations = await getConversationHistory();
@@ -289,6 +373,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setProfile(newProfile);
       setConversations({ conversations: [] });
       setProgress({ entries: [] });
+      setHomeDataCache(null);
     });
   }, []);
 
@@ -322,6 +407,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         progress,
         addProgressEntry,
         addMilestone,
+        // Home data cache
+        homeDataCache,
+        fetchHomeData,
+        isLoadingHomeData,
         // Reset
         resetAll,
       }}

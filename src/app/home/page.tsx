@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
@@ -11,21 +11,22 @@ import ProgressFooter from '@/components/home/ProgressFooter';
 import AddDataCTA from '@/components/home/AddDataCTA';
 import SmartCheckInCard from '@/components/home/SmartCheckInCard';
 import { useApp } from '@/contexts/AppContext';
-import { DailyInsight, HealthScoreTrend, HealthMetrics } from '@/types';
 import { generateCheckInContext, CheckInContext, getCheckInResponse } from '@/lib/checkInContext';
 import { calculateStreakBonus, POINTS_CONFIG } from '@/lib/scores';
 
 export default function HomePage() {
   const router = useRouter();
-  const { profile, isLoading, recordCheckIn, addMessage, recalculateScores } = useApp();
+  const {
+    profile,
+    isLoading,
+    recordCheckIn,
+    addMessage,
+    homeDataCache,
+    fetchHomeData,
+    isLoadingHomeData,
+  } = useApp();
 
-  // New state for insights and trends
-  const [dailyInsight, setDailyInsight] = useState<DailyInsight | null>(null);
-  const [scoreTrend, setScoreTrend] = useState<HealthScoreTrend | null>(null);
   const [checkInContext, setCheckInContext] = useState<CheckInContext | null>(null);
-  const [healthMetrics, setHealthMetrics] = useState<HealthMetrics | null>(null);
-  const [hasWearable, setHasWearable] = useState(false);
-  const [isLoadingInsights, setIsLoadingInsights] = useState(true);
   const [checkedInToday, setCheckedInToday] = useState(false);
 
   // Check if already checked in today
@@ -44,82 +45,24 @@ export default function HomePage() {
     }
   }, [isLoading, profile, router]);
 
-  // Fetch insights, trends, and metrics
-  const fetchHomeData = useCallback(async () => {
-    if (!profile?.id) return;
-
-    setIsLoadingInsights(true);
-
-    try {
-      // Fetch metrics FIRST to populate cache, then fetch others in parallel
-      // This prevents 3x redundant calls to getLatestHealthMetrics
-      const metricsRes = await fetch(`/api/health/metrics?userId=${encodeURIComponent(profile.id)}`);
-
-      // Now fetch insights and history (will use cached metrics)
-      const [insightRes, historyRes] = await Promise.all([
-        fetch(`/api/insights/daily?userId=${encodeURIComponent(profile.id)}`),
-        fetch(`/api/health/score-history?userId=${encodeURIComponent(profile.id)}`),
-      ]);
-
-      // Process responses
-      if (insightRes.ok) {
-        const data = await insightRes.json();
-        setDailyInsight(data.insight);
-      }
-
-      if (historyRes.ok) {
-        const data = await historyRes.json();
-        setScoreTrend(data.scoreTrend);
-      }
-
-      let hasDevice = false;
-      let fetchedMetrics = null;
-      if (metricsRes.ok) {
-        const data = await metricsRes.json();
-        fetchedMetrics = data.metrics;
-        setHealthMetrics(data.metrics);
-        hasDevice = data.hasData;
-
-        // Generate check-in context based on metrics
-        const context = generateCheckInContext(
-          data.metrics,
-          profile.checkInStreak,
-          profile.lastCheckIn
-        );
-        setCheckInContext(context);
-
-        // Recalculate scores with pre-fetched metrics (no extra API call)
-        recalculateScores(fetchedMetrics);
-      } else {
-        // Generate default check-in context
-        const context = generateCheckInContext(
-          null,
-          profile.checkInStreak,
-          profile.lastCheckIn
-        );
-        setCheckInContext(context);
-      }
-
-      setHasWearable(hasDevice);
-    } catch (error) {
-      console.error('Error fetching home data:', error);
-      // Set fallback check-in context
-      const context = generateCheckInContext(
-        null,
-        profile?.checkInStreak ?? 0,
-        profile?.lastCheckIn ?? null
-      );
-      setCheckInContext(context);
-    } finally {
-      setIsLoadingInsights(false);
-    }
-  }, [profile?.id, profile?.checkInStreak, profile?.lastCheckIn, recalculateScores]);
-
+  // Fetch home data (uses cache if available)
   useEffect(() => {
     if (profile?.onboardingCompleted) {
       fetchHomeData();
     }
   }, [profile?.onboardingCompleted, fetchHomeData]);
+
+  // Generate check-in context when metrics change
+  useEffect(() => {
+    if (profile) {
+      const context = generateCheckInContext(
+        homeDataCache?.metrics ?? null,
+        profile.checkInStreak,
+        profile.lastCheckIn
+      );
+      setCheckInContext(context);
+    }
+  }, [homeDataCache?.metrics, profile?.checkInStreak, profile?.lastCheckIn, profile]);
 
   // Handle check-in
   const handleCheckIn = (value: string) => {
@@ -142,7 +85,10 @@ export default function HomePage() {
   // Calculate streak bonus
   const streakBonus = profile ? calculateStreakBonus(profile.checkInStreak + 1) : 0;
 
-  if (isLoading || !profile?.onboardingCompleted) {
+  // Show loading state only on initial app load (not when navigating back)
+  const showSkeleton = isLoading || !profile?.onboardingCompleted;
+
+  if (showSkeleton) {
     return (
       <div className="min-h-screen flex flex-col bg-[#FAF6F1] pb-20">
         {/* Header skeleton */}
@@ -181,6 +127,9 @@ export default function HomePage() {
     );
   }
 
+  // Use cached data or show loading states for individual components
+  const isLoadingInsights = isLoadingHomeData && !homeDataCache;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF6F1] pb-20">
       <Header />
@@ -188,14 +137,14 @@ export default function HomePage() {
       <main className="flex-1 flex flex-col px-6 pt-4 space-y-4">
         {/* Daily Insight Card */}
         <DailyInsightCard
-          insight={dailyInsight}
+          insight={homeDataCache?.insight ?? null}
           isLoading={isLoadingInsights}
         />
 
         {/* Health Score with Trend */}
         <HealthScoreWithTrend
           score={profile.healthScore}
-          trend={scoreTrend}
+          trend={homeDataCache?.scoreTrend ?? null}
           onClick={() => router.push('/health')}
           isLoading={isLoadingInsights}
         />
@@ -207,15 +156,15 @@ export default function HomePage() {
           </h2>
           <HealthMetricsDashboard
             userId={profile.id}
-            initialMetrics={healthMetrics}
-            initialHasData={hasWearable}
+            initialMetrics={homeDataCache?.metrics}
+            initialHasData={homeDataCache?.hasWearable}
           />
         </div>
 
         {/* Add Data CTA */}
         <AddDataCTA
           dataSources={profile.dataSources}
-          hasWearable={hasWearable}
+          hasWearable={homeDataCache?.hasWearable ?? false}
         />
 
         {/* Smart Check-in Card */}
