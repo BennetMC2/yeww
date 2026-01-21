@@ -120,6 +120,20 @@ export default function HealthMetricsDashboard({ userId, initialMetrics, initial
     }
   }, [fetchMetrics, initialMetrics]);
 
+  // Sync props to state when parent updates them (e.g., after fetch completes)
+  useEffect(() => {
+    if (initialMetrics !== undefined) {
+      setMetrics(initialMetrics);
+      setIsLoading(false);
+    }
+  }, [initialMetrics]);
+
+  useEffect(() => {
+    if (initialHasData !== undefined) {
+      setHasData(initialHasData);
+    }
+  }, [initialHasData]);
+
   const formatLastSync = (timestamp: string | null) => {
     if (!timestamp) return 'Never';
 
