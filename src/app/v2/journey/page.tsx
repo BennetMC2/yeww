@@ -144,8 +144,12 @@ export default function JourneyPage() {
   const scoreTrend = homeDataCache?.scoreTrend;
   const scoreChange = scoreTrend?.change || 8; // Default to +8% for demo
 
-  // Use mock entries if no real entries
-  const displayEntries = progress.entries.length > 0 ? progress.entries : MOCK_ENTRIES;
+  // For demo/non-onboarded users, show empty state with motivational copy
+  // For onboarded users with no entries, also show empty state
+  // For onboarded users with entries, show their entries
+  const isDemo = !profile?.onboardingCompleted;
+  const hasRealEntries = progress.entries.length > 0;
+  const showEmptyState = isDemo || !hasRealEntries;
 
   return (
     <div className="px-6 pb-6">
@@ -195,9 +199,9 @@ export default function JourneyPage() {
         </button>
       </div>
 
-      {progress.entries.length > 0 ? (
+      {!showEmptyState ? (
         <div className="space-y-3">
-          {displayEntries.map((entry) => (
+          {progress.entries.map((entry) => (
             <div key={entry.id} className="bg-white rounded-2xl p-3">
               <div className="flex gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${entry.type === 'milestone' ? 'bg-[#FFE8DC]' : 'bg-[#F5EDE4]'}`}>
