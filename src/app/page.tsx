@@ -11,7 +11,7 @@ export default function RootPage() {
   useEffect(() => {
     if (!isLoading) {
       if (profile?.onboardingCompleted) {
-        router.replace('/home');
+        router.replace('/v2');
       } else {
         router.replace('/onboarding');
       }
