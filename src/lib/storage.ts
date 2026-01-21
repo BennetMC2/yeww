@@ -155,7 +155,11 @@ export async function getUserProfile(): Promise<UserProfile | null> {
         const fallback = localStorage.getItem('yeww_profile_fallback');
         if (fallback) {
           try {
-            return JSON.parse(fallback) as UserProfile;
+            const fallbackProfile = JSON.parse(fallback) as UserProfile;
+            // CRITICAL: Ensure fallback profile ID matches localStorage ID
+            // This prevents the wrong ID from propagating through the app
+            fallbackProfile.id = userId;
+            return fallbackProfile;
           } catch {
             // Invalid JSON, ignore
           }
@@ -186,7 +190,10 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       const fallback = localStorage.getItem('yeww_profile_fallback');
       if (fallback) {
         try {
-          return JSON.parse(fallback) as UserProfile;
+          const fallbackProfile = JSON.parse(fallback) as UserProfile;
+          // CRITICAL: Ensure fallback profile ID matches localStorage ID
+          if (userId) fallbackProfile.id = userId;
+          return fallbackProfile;
         } catch {
           // Invalid JSON, ignore
         }
@@ -704,7 +711,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
 
     // Create user in Supabase
     const profile: UserProfile = {
-      id: oldProfile.id || crypto.randomUUID(),
+      id: existingUserId || oldProfile.id || crypto.randomUUID(),  // Preserve existing localStorage ID!
       name: oldProfile.name || '',
       createdAt: oldProfile.createdAt || new Date().toISOString(),
       coachingStyle: oldProfile.coachingStyle || 'balanced',
