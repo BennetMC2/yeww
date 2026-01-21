@@ -31,6 +31,11 @@ export function getLocalUserId(): string | null {
 
 function setLocalUserId(id: string): void {
   if (!isBrowser) return;
+  // NEVER overwrite with empty/undefined - this protects the Terra reference_id
+  if (!id) {
+    console.warn('Attempted to set empty user ID - ignoring');
+    return;
+  }
   localStorage.setItem(LOCAL_USER_ID_KEY, id);
 }
 
