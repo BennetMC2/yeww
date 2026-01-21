@@ -144,12 +144,8 @@ export default function JourneyPage() {
   const scoreTrend = homeDataCache?.scoreTrend;
   const scoreChange = scoreTrend?.change || 8; // Default to +8% for demo
 
-  // For demo/non-onboarded users, show empty state with motivational copy
-  // For onboarded users with no entries, also show empty state
-  // For onboarded users with entries, show their entries
-  const isDemo = !profile?.onboardingCompleted;
+  // Show empty state when user has no real entries
   const hasRealEntries = progress.entries.length > 0;
-  const showEmptyState = isDemo || !hasRealEntries;
 
   return (
     <div className="px-6 pb-6">
@@ -199,7 +195,7 @@ export default function JourneyPage() {
         </button>
       </div>
 
-      {!showEmptyState ? (
+      {hasRealEntries ? (
         <div className="space-y-3">
           {progress.entries.map((entry) => (
             <div key={entry.id} className="bg-white rounded-2xl p-3">
