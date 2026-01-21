@@ -5,9 +5,37 @@ import { useApp } from '@/contexts/AppContext';
 import TabNav from '@/components/v2/TabNav';
 import ProfileModal from '@/components/v2/ProfileModal';
 
+import { UserProfile, ConnectedApp } from '@/types';
+
+// Mock profile for demo/preview
+const MOCK_PROFILE: UserProfile = {
+  id: 'demo',
+  name: 'Demo User',
+  createdAt: new Date().toISOString(),
+  coachingStyle: 'balanced',
+  connectedApps: ['garmin'] as ConnectedApp[],
+  healthAreas: [],
+  onboardingCompleted: true,
+  lastCheckIn: null,
+  checkInStreak: 5,
+  dataSources: [],
+  priorities: [],
+  pastAttempt: null,
+  barriers: [],
+  healthScore: 72,
+  reputationLevel: 'trusted',
+  reputationPoints: 180,
+  points: 450,
+  pointsHistory: [],
+  sharingPreferences: { research: false, brands: false, insurance: false },
+};
+
 export default function V2Layout({ children }: { children: React.ReactNode }) {
   const { profile } = useApp();
   const [showProfile, setShowProfile] = useState(false);
+
+  // Use mock profile if not onboarded
+  const displayProfile = profile?.onboardingCompleted ? profile : MOCK_PROFILE;
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -27,7 +55,7 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
             onClick={() => setShowProfile(true)}
             className="w-10 h-10 rounded-full bg-[#FFE8DC] flex items-center justify-center text-lg font-medium text-[#E07A5F] hover:bg-[#FFD9C7] transition-colors"
           >
-            {profile?.name?.charAt(0).toUpperCase() || '?'}
+            {displayProfile.name.charAt(0).toUpperCase()}
           </button>
         </div>
       </header>
@@ -41,13 +69,11 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Profile Modal */}
-      {profile && (
-        <ProfileModal
-          profile={profile}
-          isOpen={showProfile}
-          onClose={() => setShowProfile(false)}
-        />
-      )}
+      <ProfileModal
+        profile={displayProfile}
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+      />
     </div>
   );
 }

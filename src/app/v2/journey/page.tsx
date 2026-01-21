@@ -18,20 +18,22 @@ export default function JourneyPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Redirect to onboarding if not completed
-  useEffect(() => {
-    if (!isLoading && !profile?.onboardingCompleted) {
-      router.replace('/onboarding');
-    }
-  }, [isLoading, profile, router]);
+  // Skip onboarding check for v2 preview
 
-  if (isLoading || !profile?.onboardingCompleted) {
+  if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <p className="text-[#B5AFA8]">Loading...</p>
       </div>
     );
   }
+
+  // Create mock profile for preview if not onboarded
+  const displayProfile = profile || {
+    name: 'Demo User',
+    healthScore: 72,
+    checkInStreak: 5,
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -111,7 +113,7 @@ export default function JourneyPage() {
         </h3>
         <div className="flex items-end justify-between mb-4">
           <div>
-            <p className="text-4xl font-bold text-[#2D2A26]">{profile.healthScore}</p>
+            <p className="text-4xl font-bold text-[#2D2A26]">{displayProfile.healthScore}</p>
             <p className="text-sm text-[#8A8580]">current score</p>
           </div>
           {scoreChange !== 0 && (
@@ -125,7 +127,7 @@ export default function JourneyPage() {
         </div>
         {/* Simple trend visualization */}
         <div className="h-16 flex items-end gap-1">
-          {[65, 68, 64, 70, 72, 69, profile.healthScore].map((score, i) => (
+          {[65, 68, 64, 70, 72, 69, displayProfile.healthScore].map((score, i) => (
             <div
               key={i}
               className="flex-1 bg-[#FFE8DC] rounded-t transition-all"

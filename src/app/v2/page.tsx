@@ -23,12 +23,7 @@ export default function TodayPage() {
 
   const [inputValue, setInputValue] = useState('');
 
-  // Redirect to onboarding if not completed
-  useEffect(() => {
-    if (!isLoading && !profile?.onboardingCompleted) {
-      router.replace('/onboarding');
-    }
-  }, [isLoading, profile, router]);
+  // Skip onboarding check for v2 preview
 
   // Fetch data on mount
   useEffect(() => {
@@ -65,13 +60,20 @@ export default function TodayPage() {
     }
   };
 
-  if (isLoading || !profile?.onboardingCompleted) {
+  if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <p className="text-[#B5AFA8]">Loading...</p>
       </div>
     );
   }
+
+  // Create mock profile for preview if not onboarded
+  const displayProfile = profile || {
+    name: 'Demo User',
+    healthScore: 72,
+    checkInStreak: 5,
+  };
 
   return (
     <div className="px-6 pb-6 space-y-4">
@@ -91,7 +93,7 @@ export default function TodayPage() {
 
       {/* Morning Brief */}
       <MorningBrief
-        name={profile.name}
+        name={displayProfile.name}
         metrics={homeDataCache?.metrics ?? null}
         isLoading={isLoadingHomeData && !homeDataCache}
       />
