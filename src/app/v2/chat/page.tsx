@@ -22,12 +22,23 @@ function ChatContent() {
   // Get context from URL params
   const contextParam = searchParams.get('context');
 
-  // Redirect to onboarding if not completed
-  useEffect(() => {
-    if (!isLoading && !profile?.onboardingCompleted) {
-      router.replace('/onboarding');
-    }
-  }, [isLoading, profile, router]);
+  // Mock profile for demo
+  const displayProfile = profile?.onboardingCompleted ? profile : {
+    id: 'demo',
+    name: 'Demo User',
+    coachingStyle: 'balanced' as const,
+    healthAreas: [],
+    createdAt: new Date().toISOString(),
+    healthScore: 72,
+    reputationLevel: 'trusted' as const,
+    points: 450,
+    priorities: [],
+    pastAttempt: null,
+    barriers: [],
+    dataSources: [],
+    checkInStreak: 5,
+    lastCheckIn: null,
+  };
 
   // Load existing messages
   useEffect(() => {
@@ -42,17 +53,17 @@ function ChatContent() {
 
   // Handle context from URL - auto-send as first message
   useEffect(() => {
-    if (contextParam && !initialContextSent && profile && !isSending) {
+    if (contextParam && !initialContextSent && !isLoading && !isSending) {
       setInitialContextSent(true);
       // Small delay to ensure component is ready
       setTimeout(() => {
         sendMessageWithContent(contextParam);
       }, 100);
     }
-  }, [contextParam, initialContextSent, profile, isSending]);
+  }, [contextParam, initialContextSent, isLoading, isSending]);
 
   const sendMessageWithContent = async (content: string) => {
-    if (!content.trim() || isSending || !profile) return;
+    if (!content.trim() || isSending) return;
 
     setIsSending(true);
 
@@ -71,20 +82,20 @@ function ChatContent() {
         body: JSON.stringify({
           messages: recentMessages,
           userProfile: {
-            id: profile.id,
-            name: profile.name,
-            coachingStyle: profile.coachingStyle,
-            healthAreas: profile.healthAreas,
-            createdAt: profile.createdAt,
-            healthScore: profile.healthScore,
-            reputationLevel: profile.reputationLevel,
-            points: profile.points,
-            priorities: profile.priorities,
-            pastAttempt: profile.pastAttempt,
-            barriers: profile.barriers,
-            dataSources: profile.dataSources,
-            checkInStreak: profile.checkInStreak,
-            lastCheckIn: profile.lastCheckIn,
+            id: displayProfile.id,
+            name: displayProfile.name,
+            coachingStyle: displayProfile.coachingStyle,
+            healthAreas: displayProfile.healthAreas,
+            createdAt: displayProfile.createdAt,
+            healthScore: displayProfile.healthScore,
+            reputationLevel: displayProfile.reputationLevel,
+            points: displayProfile.points,
+            priorities: displayProfile.priorities,
+            pastAttempt: displayProfile.pastAttempt,
+            barriers: displayProfile.barriers,
+            dataSources: displayProfile.dataSources,
+            checkInStreak: displayProfile.checkInStreak,
+            lastCheckIn: displayProfile.lastCheckIn,
           },
         }),
       });
@@ -117,7 +128,7 @@ function ChatContent() {
     }
   };
 
-  if (isLoading || !profile?.onboardingCompleted) {
+  if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <p className="text-[#B5AFA8]">Loading...</p>
