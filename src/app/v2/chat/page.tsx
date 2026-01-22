@@ -149,13 +149,10 @@ function ChatContent() {
     }
   };
 
-  // Debug info
-  console.log('ChatContent render:', { isLoading, hasProfile: !!profile, localMessagesCount: localMessages.length });
-
   if (isLoading) {
     return (
-      <div className="p-4 bg-blue-100">
-        <p className="text-blue-800">Loading... (isLoading=true)</p>
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-[#B5AFA8]">Loading...</p>
       </div>
     );
   }
@@ -252,7 +249,6 @@ function ChatContent() {
           <ArrowLeft className="w-5 h-5 text-[#2D2A26]" />
         </button>
         <span className="font-medium text-[#2D2A26]">Chat</span>
-        <span className="text-xs text-[#8A8580] ml-auto">{localMessages.length} msgs</span>
       </div>
 
       {/* Messages */}
@@ -332,15 +328,12 @@ function ChatContent() {
 
 export default function V2ChatPage() {
   return (
-    <div className="p-4">
-      <p className="text-lg font-bold mb-4">Chat Page Debug</p>
-      <Suspense fallback={
-        <div className="p-4 bg-yellow-100">
-          <p className="text-[#B5AFA8]">Loading chat...</p>
-        </div>
-      }>
-        <ChatContent />
-      </Suspense>
-    </div>
+    <Suspense fallback={
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-[#B5AFA8]">Loading...</p>
+      </div>
+    }>
+      <ChatContent />
+    </Suspense>
   );
 }
