@@ -64,8 +64,17 @@ function ChatContent() {
   }, [contextParam, initialContextSent, isLoading, isSending]);
 
   const sendMessageWithContent = async (content: string) => {
-    if (!content.trim() || isSending) return;
+    console.log('sendMessageWithContent called, content:', content, 'isSending:', isSending);
+    if (!content.trim()) {
+      console.log('Empty content, returning');
+      return;
+    }
+    if (isSending) {
+      console.log('Already sending, returning');
+      return;
+    }
 
+    console.log('Setting isSending to true');
     setIsSending(true);
     setError(null);
 
@@ -136,9 +145,14 @@ function ChatContent() {
   };
 
   const sendMessage = async () => {
-    if (!inputValue.trim()) return;
+    console.log('sendMessage called, inputValue:', inputValue, 'isSending:', isSending);
+    if (!inputValue.trim()) {
+      console.log('Empty input, returning');
+      return;
+    }
     const content = inputValue.trim();
     setInputValue('');
+    console.log('Calling sendMessageWithContent with:', content);
     await sendMessageWithContent(content);
   };
 
@@ -299,6 +313,11 @@ function ChatContent() {
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
+
+      {/* Debug status */}
+      <div className="px-4 py-2 bg-gray-100 text-xs text-gray-600">
+        isSending: {String(isSending)} | error: {error || 'none'} | msgs: {localMessages.length}
+      </div>
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-[#EBE3DA]">
