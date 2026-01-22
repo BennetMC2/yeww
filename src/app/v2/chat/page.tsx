@@ -239,7 +239,7 @@ function ChatContent() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 120px)' }}>
       {/* Header */}
       <div className="px-4 py-3 flex items-center gap-3 border-b border-[#EBE3DA]">
         <button
@@ -249,6 +249,7 @@ function ChatContent() {
           <ArrowLeft className="w-5 h-5 text-[#2D2A26]" />
         </button>
         <span className="font-medium text-[#2D2A26]">Chat</span>
+        <span className="text-xs text-[#8A8580] ml-auto">{localMessages.length} msgs</span>
       </div>
 
       {/* Messages */}
