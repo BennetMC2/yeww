@@ -79,6 +79,7 @@ function ChatContent() {
     setError(null);
 
     try {
+      alert('A. Adding temp message to state');
       // Add user message to local state immediately for instant feedback
       const tempUserMessage: Message = {
         id: crypto.randomUUID(),
@@ -88,8 +89,10 @@ function ChatContent() {
       };
       setLocalMessages(prev => [...prev, tempUserMessage]);
 
+      alert('B. Calling addMessage to storage');
       // Also persist to storage
       const userMessage = await addMessage('user', content);
+      alert('C. addMessage completed, now calling API');
 
       const recentMessages = [...localMessages, tempUserMessage].slice(-20).map(m => ({
         role: m.role,
@@ -120,15 +123,19 @@ function ChatContent() {
         }),
       });
 
+      alert('D. API call completed, status: ' + response.status);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
       const data = await response.json();
+      alert('E. Got response: ' + data.message?.substring(0, 50));
       const assistantMessage = await addMessage('assistant', data.message);
       setLocalMessages(prev => [...prev, assistantMessage]);
+      alert('F. Done!');
     } catch (err) {
+      alert('ERROR caught: ' + String(err));
       console.error('Error sending message:', err);
       setError(err instanceof Error ? err.message : 'Failed to send message');
       // Add error message to chat
