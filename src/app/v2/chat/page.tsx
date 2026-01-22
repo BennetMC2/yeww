@@ -145,13 +145,20 @@ function ChatContent() {
   };
 
   const sendMessage = async () => {
-    alert('Send clicked! Input: ' + inputValue + ', isSending: ' + isSending);
+    alert('1. Send clicked! Input: "' + inputValue + '"');
     if (!inputValue.trim()) {
+      alert('2. Empty input, returning early');
       return;
     }
     const content = inputValue.trim();
+    alert('3. Content is: "' + content + '", about to call sendMessageWithContent');
     setInputValue('');
-    await sendMessageWithContent(content);
+    try {
+      await sendMessageWithContent(content);
+      alert('5. sendMessageWithContent completed');
+    } catch (e) {
+      alert('ERROR: ' + String(e));
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
