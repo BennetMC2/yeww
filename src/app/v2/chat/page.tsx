@@ -15,6 +15,7 @@ function ChatContent() {
   const [isSending, setIsSending] = useState(false);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [initialContextSent, setInitialContextSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -66,12 +67,22 @@ function ChatContent() {
     if (!content.trim() || isSending) return;
 
     setIsSending(true);
+    setError(null);
 
     try {
-      const userMessage = await addMessage('user', content);
-      setLocalMessages(prev => [...prev, userMessage]);
+      // Add user message to local state immediately for instant feedback
+      const tempUserMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content,
+        timestamp: new Date().toISOString(),
+      };
+      setLocalMessages(prev => [...prev, tempUserMessage]);
 
-      const recentMessages = [...localMessages, userMessage].slice(-20).map(m => ({
+      // Also persist to storage
+      const userMessage = await addMessage('user', content);
+
+      const recentMessages = [...localMessages, tempUserMessage].slice(-20).map(m => ({
         role: m.role,
         content: m.content,
       }));
@@ -100,15 +111,25 @@ function ChatContent() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to get response');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
 
       const data = await response.json();
       const assistantMessage = await addMessage('assistant', data.message);
       setLocalMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage = await addMessage('assistant', "Sorry, I couldn't respond right now. Try again?");
-      setLocalMessages(prev => [...prev, errorMessage]);
+    } catch (err) {
+      console.error('Error sending message:', err);
+      setError(err instanceof Error ? err.message : 'Failed to send message');
+      // Add error message to chat
+      const errorMsg: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: "Sorry, I couldn't respond right now. Try again?",
+        timestamp: new Date().toISOString(),
+      };
+      setLocalMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsSending(false);
     }
@@ -271,6 +292,13 @@ function ChatContent() {
           </div>
         )}
       </div>
+
+      {/* Error display */}
+      {error && (
+        <div className="px-4 py-2 bg-red-50 border-t border-red-200">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-[#EBE3DA]">
