@@ -64,17 +64,17 @@ function ChatContent() {
   }, [contextParam, initialContextSent, isLoading, isSending]);
 
   const sendMessageWithContent = async (content: string) => {
-    console.log('sendMessageWithContent called, content:', content, 'isSending:', isSending);
+    alert('sendMessageWithContent called! content: ' + content);
     if (!content.trim()) {
-      console.log('Empty content, returning');
+      alert('Empty content, returning');
       return;
     }
     if (isSending) {
-      console.log('Already sending, returning');
+      alert('Already sending, returning');
       return;
     }
 
-    console.log('Setting isSending to true');
+    alert('About to set isSending to true and send to API');
     setIsSending(true);
     setError(null);
 
