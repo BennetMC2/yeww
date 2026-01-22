@@ -145,14 +145,12 @@ function ChatContent() {
   };
 
   const sendMessage = async () => {
-    console.log('sendMessage called, inputValue:', inputValue, 'isSending:', isSending);
+    alert('Send clicked! Input: ' + inputValue + ', isSending: ' + isSending);
     if (!inputValue.trim()) {
-      console.log('Empty input, returning');
       return;
     }
     const content = inputValue.trim();
     setInputValue('');
-    console.log('Calling sendMessageWithContent with:', content);
     await sendMessageWithContent(content);
   };
 
