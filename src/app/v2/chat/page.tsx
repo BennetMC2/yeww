@@ -10,6 +10,18 @@ interface ChatMessage {
   content: string;
 }
 
+// Read profile directly from localStorage
+function getStoredProfile() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = localStorage.getItem('longevity_user_profile');
+    if (stored) return JSON.parse(stored);
+  } catch (e) {
+    console.error('Failed to read profile from localStorage:', e);
+  }
+  return null;
+}
+
 function ChatContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,10 +30,17 @@ function ChatContent() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialSent = useRef(false);
 
   const contextParam = searchParams.get('context');
+
+  // Load profile from localStorage on mount
+  useEffect(() => {
+    const stored = getStoredProfile();
+    if (stored) setProfile(stored);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,20 +75,20 @@ function ChatContent() {
         body: JSON.stringify({
           messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
           userProfile: {
-            id: 'user',
-            name: 'User',
-            coachingStyle: 'balanced',
-            healthAreas: [],
-            createdAt: new Date().toISOString(),
-            healthScore: 70,
-            reputationLevel: 'starter',
-            points: 0,
-            priorities: [],
-            pastAttempt: null,
-            barriers: [],
-            dataSources: [],
-            checkInStreak: 0,
-            lastCheckIn: null,
+            id: profile?.id || 'user',
+            name: profile?.name || 'User',
+            coachingStyle: profile?.coachingStyle || 'balanced',
+            healthAreas: profile?.healthAreas || [],
+            createdAt: profile?.createdAt || new Date().toISOString(),
+            healthScore: profile?.healthScore || 70,
+            reputationLevel: profile?.reputationLevel || 'starter',
+            points: profile?.points || 0,
+            priorities: profile?.priorities || [],
+            pastAttempt: profile?.pastAttempt || null,
+            barriers: profile?.barriers || [],
+            dataSources: profile?.dataSources || [],
+            checkInStreak: profile?.checkInStreak || 0,
+            lastCheckIn: profile?.lastCheckIn || null,
           },
         }),
       });
