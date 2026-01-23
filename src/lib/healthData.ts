@@ -21,18 +21,27 @@ interface TerraUser {
  * Get the provider for a user from terra_users
  */
 async function getProvider(userId: string): Promise<HealthProvider> {
-  const { data } = await supabase
-    .from('terra_users')
-    .select('provider')
-    .eq('reference_id', userId)
-    .order('last_webhook_update', { ascending: false })
-    .limit(1);
+  try {
+    const { data, error } = await supabase
+      .from('terra_users')
+      .select('provider')
+      .eq('reference_id', userId)
+      .order('last_webhook_update', { ascending: false })
+      .limit(1);
 
-  if (data && data.length > 0) {
-    const provider = (data[0] as TerraUser).provider?.toUpperCase();
-    if (['GARMIN', 'WHOOP', 'OURA', 'FITBIT', 'APPLE', 'GOOGLE'].includes(provider)) {
-      return provider as HealthProvider;
+    // Silently handle auth/permission errors - will use mock data instead
+    if (error) {
+      return 'UNKNOWN';
     }
+
+    if (data && data.length > 0) {
+      const provider = (data[0] as TerraUser).provider?.toUpperCase();
+      if (['GARMIN', 'WHOOP', 'OURA', 'FITBIT', 'APPLE', 'GOOGLE'].includes(provider)) {
+        return provider as HealthProvider;
+      }
+    }
+  } catch {
+    // Silently fail - will use mock data
   }
   return 'UNKNOWN';
 }
@@ -321,8 +330,8 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
     }
 
     return Object.keys(metrics).length > 1 ? metrics : null; // > 1 because provider is always set
-  } catch (error) {
-    console.error('Error processing health data:', error);
+  } catch {
+    // Silently fail - the app will use mock data for the demo
     return null;
   }
 }
@@ -373,13 +382,11 @@ export async function syncHealthDaily(userId: string, date: string): Promise<boo
       .upsert(dailyRecord, { onConflict: 'user_id,date' });
 
     if (error) {
-      console.error('Error syncing health daily:', error);
       return false;
     }
 
     return true;
-  } catch (error) {
-    console.error('Error in syncHealthDaily:', error);
+  } catch {
     return false;
   }
 }

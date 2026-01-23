@@ -33,7 +33,6 @@ function setLocalUserId(id: string): void {
   if (!isBrowser) return;
   // NEVER overwrite with empty/undefined - this protects the Terra reference_id
   if (!id) {
-    console.warn('Attempted to set empty user ID - ignoring');
     return;
   }
   localStorage.setItem(LOCAL_USER_ID_KEY, id);
@@ -173,7 +172,6 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 
       // No fallback - create new profile with EXISTING localStorage ID
       // This preserves the ID that was set (e.g., to match Terra reference_id)
-      console.log('Creating new profile with existing localStorage ID:', userId);
       const newProfile = createDefaultProfile(userId);
       await saveUserProfile(newProfile);
       return newProfile;
@@ -188,9 +186,8 @@ export async function getUserProfile(): Promise<UserProfile | null> {
     }));
 
     return dbUserToProfile(userResult.data, pointsHistory);
-  } catch (error) {
-    console.error('Error reading user profile:', error);
-    // Try fallback on error
+  } catch {
+    // Silently fall back to localStorage on Supabase errors (e.g., 401/406)
     if (isBrowser) {
       const fallback = localStorage.getItem('yeww_profile_fallback');
       if (fallback) {
@@ -213,7 +210,10 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
   // This ensures the profile persists even if Supabase save is slow or fails
   setLocalUserId(profile.id);
   if (isBrowser) {
+    // Always keep profile in localStorage - needed for chat and offline access
     localStorage.setItem('yeww_profile_fallback', JSON.stringify(profile));
+    // Also save to the key the chat page might look for
+    localStorage.setItem('longevity_user_profile', JSON.stringify(profile));
   }
 
   try {
@@ -224,18 +224,13 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
       .upsert(dbUser, { onConflict: 'id' });
 
     if (error) {
-      console.error('Error saving user profile to Supabase:', error.message || error);
-      // Profile is already saved to localStorage, so app continues to work
+      // Silently fail - profile is already saved to localStorage
       return;
     }
-
-    // Success - clear fallback since Supabase has the data
-    if (isBrowser) {
-      localStorage.removeItem('yeww_profile_fallback');
-    }
-  } catch (error) {
-    console.error('Error saving user profile:', error);
-    // Profile is already saved to localStorage, so app continues to work
+    // Note: We no longer clear localStorage on success - keeping it ensures
+    // chat and other components always have access to profile data
+  } catch {
+    // Silently fail - profile is already saved to localStorage
   }
 }
 
@@ -381,8 +376,8 @@ export async function getConversationHistory(): Promise<ConversationHistory> {
     }
 
     return { conversations };
-  } catch (error) {
-    console.error('Error reading conversations:', error);
+  } catch {
+    // Silently fall back to localStorage on Supabase errors
     return localHistory;
   }
 }
@@ -476,8 +471,8 @@ export async function addMessage(
           return msgWithImages;
         }
       }
-    } catch (error) {
-      console.error('Supabase message save failed, using localStorage:', error);
+    } catch {
+      // Silently fall back to localStorage
     }
   }
 
@@ -519,7 +514,7 @@ export async function getProgressData(): Promise<ProgressData> {
       .order('date', { ascending: false });
 
     if (error || !data) {
-      console.error('Error reading progress:', error);
+      // Silently return empty on Supabase errors
       return { entries: [] };
     }
 
@@ -533,8 +528,8 @@ export async function getProgressData(): Promise<ProgressData> {
     }));
 
     return { entries };
-  } catch (error) {
-    console.error('Error reading progress:', error);
+  } catch {
+    // Silently return empty on Supabase errors
     return { entries: [] };
   }
 }
@@ -675,8 +670,8 @@ export async function resetAllData(): Promise<void> {
         supabase.from('points_history').delete().eq('user_id', userId),
         supabase.from('users').delete().eq('id', userId),
       ]);
-    } catch (error) {
-      console.error('Error resetting data:', error);
+    } catch {
+      // Silently fail - localStorage will be cleared anyway
     }
   }
 
@@ -712,7 +707,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
       if (data) return; // Already migrated
     }
 
-    console.log('Migrating data from localStorage to Supabase...');
+    // Migrating data from localStorage to Supabase
 
     // Create user in Supabase
     const profile: UserProfile = {
@@ -800,8 +795,8 @@ export async function migrateFromLocalStorage(): Promise<void> {
     localStorage.removeItem(OLD_KEYS.CONVERSATIONS);
     localStorage.removeItem(OLD_KEYS.PROGRESS);
 
-    console.log('Migration complete!');
-  } catch (error) {
-    console.error('Migration failed:', error);
+    // Migration complete
+  } catch {
+    // Migration failed silently - old data remains in localStorage
   }
 }

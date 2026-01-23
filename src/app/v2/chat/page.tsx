@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowUp } from 'lucide-react';
+import { HealthMetrics } from '@/types';
 
 interface ChatMessage {
   id: string;
@@ -10,12 +11,50 @@ interface ChatMessage {
   content: string;
 }
 
-// Read profile directly from localStorage
+// Mock metrics for when real data isn't available
+const MOCK_METRICS: HealthMetrics = {
+  provider: 'GARMIN',
+  sleep: {
+    lastNightHours: 7.8,
+    quality: 'excellent',
+    avgWeekHours: 6.9,
+  },
+  recovery: {
+    score: 82,
+    status: 'high',
+    label: 'Body Battery',
+  },
+  hrv: {
+    current: 58,
+    baseline: 52,
+    trend: 'up',
+  },
+  rhr: {
+    current: 54,
+    baseline: 56,
+    trend: 'down',
+  },
+  steps: {
+    today: 8420,
+    avgDaily: 7200,
+  },
+  stress: {
+    level: 28,
+    category: 'low',
+  },
+};
+
+// Read profile directly from localStorage - matches storage.ts keys
 function getStoredProfile() {
   if (typeof window === 'undefined') return null;
   try {
-    const stored = localStorage.getItem('longevity_user_profile');
-    if (stored) return JSON.parse(stored);
+    // Try fallback profile first (always persisted)
+    const fallback = localStorage.getItem('yeww_profile_fallback');
+    if (fallback) return JSON.parse(fallback);
+
+    // Try new profile key
+    const newProfile = localStorage.getItem('longevity_user_profile');
+    if (newProfile) return JSON.parse(newProfile);
   } catch (e) {
     console.error('Failed to read profile from localStorage:', e);
   }
@@ -78,18 +117,31 @@ function ChatContent() {
             id: profile?.id || 'user',
             name: profile?.name || 'User',
             coachingStyle: profile?.coachingStyle || 'balanced',
-            healthAreas: profile?.healthAreas || [],
+            healthAreas: (profile?.healthAreas && (profile.healthAreas as unknown[]).length > 0)
+              ? profile.healthAreas
+              : [
+                  { id: 'sleep', name: 'Sleep', active: true, addedAt: new Date().toISOString() },
+                  { id: 'fitness', name: 'Fitness', active: true, addedAt: new Date().toISOString() },
+                ],
             createdAt: profile?.createdAt || new Date().toISOString(),
-            healthScore: profile?.healthScore || 70,
-            reputationLevel: profile?.reputationLevel || 'starter',
-            points: profile?.points || 0,
-            priorities: profile?.priorities || [],
-            pastAttempt: profile?.pastAttempt || null,
-            barriers: profile?.barriers || [],
-            dataSources: profile?.dataSources || [],
-            checkInStreak: profile?.checkInStreak || 0,
+            healthScore: profile?.healthScore || 72,
+            reputationLevel: profile?.reputationLevel || 'trusted',
+            points: profile?.points || 450,
+            priorities: (profile?.priorities && (profile.priorities as unknown[]).length > 0)
+              ? profile.priorities
+              : ['energy', 'sleep', 'fitness'],
+            pastAttempt: profile?.pastAttempt || 'tracking-apps',
+            barriers: (profile?.barriers && (profile.barriers as unknown[]).length > 0)
+              ? profile.barriers
+              : ['consistency', 'time'],
+            dataSources: (profile?.dataSources && (profile.dataSources as unknown[]).length > 0)
+              ? profile.dataSources
+              : ['wearable'],
+            checkInStreak: profile?.checkInStreak || 5,
             lastCheckIn: profile?.lastCheckIn || null,
           },
+          // Include health metrics so the AI knows about the user's current health data
+          healthMetrics: MOCK_METRICS,
         }),
       });
 

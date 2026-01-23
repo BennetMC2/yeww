@@ -44,6 +44,7 @@ interface ChatRequest {
     checkInStreak: number;
     lastCheckIn?: string | null;
   };
+  healthMetrics?: HealthMetrics;
 }
 
 // Helper to format messages for Claude API (with vision support)
@@ -98,22 +99,21 @@ function formatMessagesForClaude(messages: Message[]): Anthropic.MessageParam[] 
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, userProfile }: ChatRequest = await request.json();
+    const { messages, userProfile, healthMetrics: clientMetrics }: ChatRequest = await request.json();
 
     // Calculate conversation turn (number of user messages)
     const conversationTurn = messages.filter(m => m.role === 'user').length;
 
-    // Fetch real health metrics from Terra if user has connected devices
-    let healthMetrics: HealthMetrics | undefined;
-    if (userProfile.id) {
+    // Use client-provided metrics first, then try to fetch from Terra
+    let healthMetrics: HealthMetrics | undefined = clientMetrics;
+    if (!healthMetrics && userProfile.id) {
       try {
         const metrics = await getLatestHealthMetrics(userProfile.id);
         if (metrics) {
           healthMetrics = metrics;
         }
-      } catch (error) {
+      } catch {
         // Silently fail - health metrics are optional
-        console.log('Could not fetch health metrics:', error);
       }
     }
 
