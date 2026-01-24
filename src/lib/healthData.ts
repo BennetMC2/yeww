@@ -5,6 +5,7 @@
 
 import { supabase } from './supabase';
 import { HealthMetrics, HealthProvider } from '@/types';
+import { getCachedBaselines, BaselineMetricType } from './baselineComputer';
 
 interface TerraPayload {
   id: string;
@@ -163,6 +164,9 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
       provider,
     };
 
+    // Fetch cached baselines to enrich metrics
+    const baselines = await getCachedBaselines(userId).catch(() => null);
+
     // Process sleep data - use most recent by sleep date
     if (mostRecentSleep) {
       const sleepData = mostRecentSleep.data as {
@@ -191,7 +195,7 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
         metrics.sleep = {
           lastNightHours: Math.round(sleepHours * 10) / 10,
           quality: efficiency >= 0.85 ? 'excellent' : efficiency >= 0.75 ? 'good' : efficiency >= 0.65 ? 'fair' : 'poor',
-          avgWeekHours: sleepHours, // TODO: compute from historical data
+          avgWeekHours: baselines?.sleep_hours?.avg7day ?? sleepHours,
           sleepDate,
         };
       }
@@ -226,10 +230,14 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
         // Resting heart rate
         const rhr = dailyData.heart_rate_data?.summary?.resting_hr_bpm;
         if (rhr) {
+          const rhrBaseline = baselines?.rhr?.avg7day ?? rhr;
+          const rhrDiff = rhr - rhrBaseline;
+          const rhrTrend: 'up' | 'down' | 'stable' =
+            rhrDiff > 2 ? 'up' : rhrDiff < -2 ? 'down' : 'stable';
           metrics.rhr = {
             current: Math.round(rhr),
-            baseline: Math.round(rhr), // TODO: compute from historical data
-            trend: 'stable',
+            baseline: Math.round(rhrBaseline),
+            trend: rhrTrend,
           };
         }
 
@@ -238,10 +246,14 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
                     dailyData.heart_rate_data?.summary?.avg_hrv_sdnn ||
                     dailyData.hrv_data?.summary?.avg_hrv_rmssd;
         if (hrv) {
+          const hrvBaseline = baselines?.hrv?.avg7day ?? hrv;
+          const hrvDiff = hrv - hrvBaseline;
+          const hrvTrend: 'up' | 'down' | 'stable' =
+            hrvDiff > 3 ? 'up' : hrvDiff < -3 ? 'down' : 'stable';
           metrics.hrv = {
             current: Math.round(hrv),
-            baseline: Math.round(hrv), // TODO: compute from historical data
-            trend: 'stable',
+            baseline: Math.round(hrvBaseline),
+            trend: hrvTrend,
           };
         }
 
@@ -250,7 +262,7 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
         if (steps) {
           metrics.steps = {
             today: steps,
-            avgDaily: steps, // TODO: compute from historical data
+            avgDaily: baselines?.steps?.avg7day ?? steps,
           };
         }
 
@@ -324,7 +336,7 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
       if (dailyData?.strain_data?.strain_level != null) {
         metrics.strain = {
           score: dailyData.strain_data.strain_level,
-          weeklyAvg: dailyData.strain_data.strain_level, // TODO: compute from historical
+          weeklyAvg: baselines?.recovery?.avg7day ?? dailyData.strain_data.strain_level,
         };
       }
     }

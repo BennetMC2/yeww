@@ -864,3 +864,94 @@ export async function dismissAllInsights(userId: string): Promise<boolean> {
 
   return !error;
 }
+
+/**
+ * Generate insight from a detected pattern
+ */
+export async function generatePatternInsight(
+  userId: string,
+  pattern: {
+    description: string;
+    metricA: string;
+    metricB?: string;
+    correlationStrength: number;
+    confidence: number;
+    direction: 'positive' | 'negative';
+    sampleSize: number;
+  },
+  currentMetrics: {
+    metricA?: number;
+    metricB?: number;
+  }
+): Promise<ProactiveInsight | null> {
+  try {
+    const userName = await getUserName(userId);
+
+    // Build context for the insight
+    const strengthLabel = Math.abs(pattern.correlationStrength) >= 0.7 ? 'strong' :
+                          Math.abs(pattern.correlationStrength) >= 0.5 ? 'moderate' : 'notable';
+
+    const prompt = `Generate a brief, actionable health insight (1-2 sentences) for ${userName}.
+
+PATTERN DATA:
+${pattern.description}
+Correlation strength: ${strengthLabel} (${pattern.direction})
+Confidence: ${Math.round(pattern.confidence * 100)}%
+Based on ${pattern.sampleSize} days of data
+
+${currentMetrics.metricA ? `Current ${pattern.metricA}: ${currentMetrics.metricA}` : ''}
+${currentMetrics.metricB && pattern.metricB ? `Current ${pattern.metricB}: ${currentMetrics.metricB}` : ''}
+
+Guidelines:
+- Make it personal and conversational
+- Include specific implications or suggestions if appropriate
+- Don't repeat the raw statistics
+- Sound like a knowledgeable friend sharing an observation
+
+Example good outputs:
+- "Your data shows a clear pattern: better sleep leads to better recovery for you. Last night's 7+ hours should set you up well for today."
+- "Interesting trend in your data—your recovery tends to dip after high-step days. Might want to plan some rest after that 12k day."
+
+Generate ONLY the insight message:`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 150,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const textContent = response.content.find(block => block.type === 'text');
+    if (!textContent || textContent.type !== 'text') {
+      return null;
+    }
+
+    let message = textContent.text.trim();
+    message = message.replace(/^["']|["']$/g, '');
+
+    // Store as a pattern-type insight
+    const { data, error } = await supabase
+      .from('proactive_insights')
+      .insert({
+        user_id: userId,
+        message,
+        type: 'pattern',
+        priority: pattern.confidence >= 0.7 ? 'medium' : 'low',
+        data_context: {
+          pattern,
+          currentMetrics,
+        },
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error storing pattern insight:', error);
+      return null;
+    }
+
+    return mapDbRowToInsight(data);
+  } catch (error) {
+    console.error('Error generating pattern insight:', error);
+    return null;
+  }
+}

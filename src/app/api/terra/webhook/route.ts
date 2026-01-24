@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature, TerraWebhookPayload } from '@/lib/terra';
 import { supabase } from '@/lib/supabase';
 import { processNewHealthData } from '@/lib/proactiveInsight';
+import { updateBaselinesIfNeeded } from '@/lib/baselineComputer';
+import { detectPatternsIfNeeded } from '@/lib/correlationEngine';
 
 export async function POST(request: NextRequest) {
   try {
@@ -116,6 +118,28 @@ export async function POST(request: NextRequest) {
               })
               .catch(err => {
                 console.error('Error generating proactive insight:', err);
+              });
+
+            // Trigger baseline computation (once per day max)
+            updateBaselinesIfNeeded(user.reference_id)
+              .then(updated => {
+                if (updated) {
+                  console.log(`Baselines updated for ${user.reference_id}`);
+                }
+              })
+              .catch(err => {
+                console.error('Error updating baselines:', err);
+              });
+
+            // Trigger pattern detection (once per day max)
+            detectPatternsIfNeeded(user.reference_id)
+              .then(patterns => {
+                if (patterns && patterns.length > 0) {
+                  console.log(`Patterns detected for ${user.reference_id}:`, patterns.length);
+                }
+              })
+              .catch(err => {
+                console.error('Error detecting patterns:', err);
               });
           }
         }

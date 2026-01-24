@@ -9,9 +9,11 @@ import {
   ReputationLevel,
   HealthArea,
   HealthMetrics,
+  DetectedPattern,
 } from '@/types';
 import { buildSystemPromptFromProfile } from '@/lib/promptBuilder';
 import { getLatestHealthMetrics } from '@/lib/healthData';
+import { getActivePatterns } from '@/lib/correlationEngine';
 
 const anthropic = new Anthropic();
 
@@ -106,19 +108,36 @@ export async function POST(request: NextRequest) {
 
     // Use client-provided metrics first, then try to fetch from Terra
     let healthMetrics: HealthMetrics | undefined = clientMetrics;
-    if (!healthMetrics && userProfile.id) {
-      try {
-        const metrics = await getLatestHealthMetrics(userProfile.id);
-        if (metrics) {
-          healthMetrics = metrics;
-        }
-      } catch {
-        // Silently fail - health metrics are optional
+    let patterns: DetectedPattern[] = [];
+
+    if (userProfile.id) {
+      // Fetch health metrics and patterns in parallel
+      const [metricsResult, patternsResult] = await Promise.allSettled([
+        !healthMetrics ? getLatestHealthMetrics(userProfile.id) : Promise.resolve(null),
+        getActivePatterns(userProfile.id),
+      ]);
+
+      if (metricsResult.status === 'fulfilled' && metricsResult.value) {
+        healthMetrics = metricsResult.value;
+      }
+
+      if (patternsResult.status === 'fulfilled' && patternsResult.value) {
+        patterns = patternsResult.value.map(p => ({
+          id: p.id || '',
+          description: p.description,
+          confidence: p.confidence,
+          lastTriggered: p.lastObserved,
+          metricA: p.metricA,
+          metricB: p.metricB,
+          correlationStrength: p.correlationStrength ?? undefined,
+          direction: p.direction ?? undefined,
+          sampleSize: p.sampleSize,
+        }));
       }
     }
 
     // Build comprehensive system prompt using the new prompt builder
-    const systemPrompt = buildSystemPromptFromProfile(userProfile, conversationTurn, healthMetrics);
+    const systemPrompt = buildSystemPromptFromProfile(userProfile, conversationTurn, healthMetrics, patterns);
 
     // Format messages for Claude API (with vision support)
     const formattedMessages = formatMessagesForClaude(messages);

@@ -65,12 +65,27 @@ export function buildActivePatterns(patterns?: DetectedPattern[]): string {
     return '';
   }
 
-  const patternLines = patterns.map(p =>
-    `- ${p.description} (confidence: ${Math.round(p.confidence * 100)}%)`
-  ).join('\n');
+  const patternLines = patterns.map(p => {
+    let line = `- ${p.description}`;
+    if (p.correlationStrength) {
+      const strength = Math.abs(p.correlationStrength);
+      const strengthLabel = strength >= 0.7 ? 'strong' : strength >= 0.5 ? 'moderate' : 'weak';
+      line += ` [${strengthLabel}, r=${p.correlationStrength.toFixed(2)}]`;
+    }
+    line += ` (confidence: ${Math.round(p.confidence * 100)}%, n=${p.sampleSize || '?'})`;
+    return line;
+  }).join('\n');
 
   return `<detected_patterns>
-These patterns have been identified for this user. Surface them when relevant:
+These correlations have been detected in this user's health data. Surface them when relevant to the conversation:
+
 ${patternLines}
+
+Use these patterns to:
+1. Explain observed changes ("Your recovery is down today—that tracks with your late bedtime")
+2. Make predictions ("Based on your patterns, this workout might affect tomorrow's recovery")
+3. Suggest actions ("Your data shows sleep impacts your HRV significantly—might be worth prioritizing tonight")
+
+Remember: Patterns with higher confidence (>70%) can be stated more directly; lower confidence patterns should be framed as observations.
 </detected_patterns>`;
 }

@@ -11,6 +11,7 @@ import {
   DataSource,
   HealthArea,
   HealthMetrics,
+  DetectedPattern,
 } from '@/types';
 
 import {
@@ -148,7 +149,8 @@ export function buildSystemPromptFromProfile(
     lastCheckIn?: string | null;
   },
   conversationTurn: number = 1,
-  healthMetrics?: HealthMetrics
+  healthMetrics?: HealthMetrics,
+  detectedPatterns?: DetectedPattern[]
 ): string {
   // Convert to full UserProfile format
   const fullProfile: UserProfile = {
@@ -182,6 +184,11 @@ export function buildSystemPromptFromProfile(
   // Add health metrics if available from Terra
   if (healthMetrics) {
     context.healthMetrics = healthMetrics;
+  }
+
+  // Add detected patterns if available
+  if (detectedPatterns && detectedPatterns.length > 0) {
+    context.detectedPatterns = detectedPatterns;
   }
 
   return buildSystemPrompt(context);

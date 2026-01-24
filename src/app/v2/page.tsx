@@ -2,11 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Scale, Camera, FlaskConical } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import MorningBrief from '@/components/v2/MorningBrief';
 import ExpandableStats from '@/components/v2/ExpandableStats';
 import ProactiveInsightCard from '@/components/ProactiveInsightCard';
-import { ProactiveInsight, HealthMetrics } from '@/types';
+import WeightEntryModal from '@/components/data/WeightEntryModal';
+import ScreenshotImportModal from '@/components/data/ScreenshotImportModal';
+import PatternCard from '@/components/insights/PatternCard';
+import { ProactiveInsight, HealthMetrics, DetectedPattern } from '@/types';
 
 // Mock metrics for demo
 const MOCK_METRICS: HealthMetrics = {
@@ -66,6 +70,9 @@ export default function TodayPage() {
   } = useApp();
 
   const [inputValue, setInputValue] = useState('');
+  const [showWeightModal, setShowWeightModal] = useState(false);
+  const [showScreenshotModal, setShowScreenshotModal] = useState(false);
+  const [patterns, setPatterns] = useState<DetectedPattern[]>([]);
 
   // Skip onboarding check for v2 preview
 
@@ -77,11 +84,46 @@ export default function TodayPage() {
     }
   }, [profile?.onboardingCompleted, fetchHomeData, fetchProactiveInsights]);
 
+  // Fetch patterns
+  useEffect(() => {
+    async function fetchPatterns() {
+      if (!profile?.id) return;
+      try {
+        const response = await fetch(`/api/insights/patterns?userId=${profile.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.patterns) {
+            setPatterns(data.patterns.map((p: Record<string, unknown>) => ({
+              id: p.id as string,
+              description: p.description as string,
+              confidence: p.confidence as number,
+              lastTriggered: p.lastObserved as string,
+              metricA: p.metricA as string,
+              metricB: p.metricB as string | undefined,
+              correlationStrength: p.correlationStrength as number | undefined,
+              direction: p.direction as 'positive' | 'negative' | undefined,
+              sampleSize: p.sampleSize as number | undefined,
+            })));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching patterns:', err);
+      }
+    }
+    fetchPatterns();
+  }, [profile?.id]);
+
   // Handle discussing a proactive insight
   const handleDiscussInsight = (insight: ProactiveInsight) => {
     const context = `Tell me more about this: ${insight.message}`;
     router.push(`/v2/chat?context=${encodeURIComponent(context)}`);
     dismissInsight(insight.id);
+  };
+
+  // Handle tapping a pattern
+  const handlePatternTap = (pattern: { id: string; description: string }) => {
+    const context = `Tell me more about this pattern: ${pattern.description}`;
+    router.push(`/v2/chat?context=${encodeURIComponent(context)}`);
   };
 
   // Handle tapping a metric
@@ -102,6 +144,26 @@ export default function TodayPage() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  // Handle saving weight
+  const handleSaveWeight = async (weightKg: number, date: string) => {
+    const response = await fetch('/api/health/weight', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: profile?.id || 'demo-user',
+        weightKg,
+        date,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save weight');
+    }
+
+    // Refresh home data to show updated weight
+    fetchHomeData();
   };
 
   if (isLoading) {
@@ -153,6 +215,59 @@ export default function TodayPage() {
         onMetricTap={handleMetricTap}
       />
 
+      {/* Detected Patterns */}
+      {patterns.length > 0 && (
+        <div className="pt-2">
+          <h3 className="text-sm font-medium text-[#8A8580] mb-2">Your Patterns</h3>
+          <div className="space-y-2">
+            {patterns.slice(0, 3).map((pattern) => (
+              <PatternCard
+                key={pattern.id}
+                pattern={{
+                  id: pattern.id,
+                  description: pattern.description,
+                  metricA: pattern.metricA || '',
+                  metricB: pattern.metricB,
+                  correlationStrength: pattern.correlationStrength,
+                  confidence: pattern.confidence,
+                  direction: pattern.direction,
+                  sampleSize: pattern.sampleSize,
+                }}
+                onTap={handlePatternTap}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Data Sources */}
+      <div className="pt-2">
+        <h3 className="text-sm font-medium text-[#8A8580] mb-2">Add Data</h3>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowWeightModal(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-white rounded-xl text-[#2D2A26] hover:bg-[#F5EDE4] transition-colors"
+          >
+            <Scale className="w-4 h-4 text-[#E07A5F]" />
+            <span className="text-sm font-medium">Weight</span>
+          </button>
+          <button
+            onClick={() => setShowScreenshotModal(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-white rounded-xl text-[#2D2A26] hover:bg-[#F5EDE4] transition-colors"
+          >
+            <Camera className="w-4 h-4 text-[#E07A5F]" />
+            <span className="text-sm font-medium">Screenshot</span>
+          </button>
+          <button
+            disabled
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-white/50 rounded-xl text-[#B5AFA8] cursor-not-allowed"
+          >
+            <FlaskConical className="w-4 h-4" />
+            <span className="text-sm font-medium">Labs</span>
+          </button>
+        </div>
+      </div>
+
       {/* Chat Input */}
       <div className="pt-2">
         <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 shadow-sm">
@@ -175,6 +290,19 @@ export default function TodayPage() {
           </button>
         </div>
       </div>
+
+      {/* Modals */}
+      <WeightEntryModal
+        isOpen={showWeightModal}
+        onClose={() => setShowWeightModal(false)}
+        onSave={handleSaveWeight}
+      />
+      <ScreenshotImportModal
+        isOpen={showScreenshotModal}
+        onClose={() => setShowScreenshotModal(false)}
+        userId={profile?.id || 'demo-user'}
+        onSaveComplete={() => fetchHomeData()}
+      />
     </div>
   );
 }

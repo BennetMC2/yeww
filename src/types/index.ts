@@ -298,6 +298,13 @@ export interface DetectedPattern {
   description: string;
   confidence: number;
   lastTriggered: string;
+  // Extended fields from correlation engine
+  metricA?: string;
+  metricB?: string;
+  correlationStrength?: number;
+  direction?: 'positive' | 'negative';
+  timeLagDays?: number;
+  sampleSize?: number;
 }
 
 // Proactive insight types
