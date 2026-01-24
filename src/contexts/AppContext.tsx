@@ -308,8 +308,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Fetch all home data in parallel
+      const refreshParam = forceRefresh ? '&refresh=true' : '';
       const [metricsRes, insightRes, historyRes] = await Promise.all([
-        fetch(`/api/health/metrics?userId=${encodeURIComponent(profile.id)}`),
+        fetch(`/api/health/metrics?userId=${encodeURIComponent(profile.id)}${refreshParam}`),
         fetch(`/api/insights/daily?userId=${encodeURIComponent(profile.id)}`),
         fetch(`/api/health/score-history?userId=${encodeURIComponent(profile.id)}`),
       ]);

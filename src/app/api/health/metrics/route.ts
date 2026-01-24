@@ -14,8 +14,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check cache first
-    if (hasCachedMetrics(userId)) {
+    // Allow force refresh via query param
+    const forceRefresh = request.nextUrl.searchParams.get('refresh') === 'true';
+
+    // Check cache first (unless forcing refresh)
+    if (!forceRefresh && hasCachedMetrics(userId)) {
       const cachedMetrics = getCachedMetrics(userId);
       return NextResponse.json({
         hasData: cachedMetrics !== null,
