@@ -274,14 +274,22 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
 
         // Garmin-specific: Body Battery and Stress
         if (provider === 'GARMIN' && dailyData.stress_data) {
-          // Body Battery as recovery - get most recent sample
+          // Body Battery as recovery - get morning peak (max) value
+          // Body Battery starts high after sleep and depletes throughout the day
+          // The morning peak is the meaningful "how recovered are you" number
           if (dailyData.stress_data.body_battery_samples?.length) {
             const samples = dailyData.stress_data.body_battery_samples;
-            const latestSample = samples[samples.length - 1];
-            if (latestSample?.level != null) {
+            // Find the maximum (morning peak) value
+            let maxLevel = 0;
+            for (const sample of samples) {
+              if (sample?.level != null && sample.level > maxLevel) {
+                maxLevel = sample.level;
+              }
+            }
+            if (maxLevel > 0) {
               metrics.recovery = {
-                score: latestSample.level,
-                status: latestSample.level >= 67 ? 'high' : latestSample.level >= 34 ? 'moderate' : 'low',
+                score: maxLevel,
+                status: maxLevel >= 67 ? 'high' : maxLevel >= 34 ? 'moderate' : 'low',
                 label: getRecoveryLabel(provider),
               };
             }

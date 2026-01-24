@@ -110,16 +110,17 @@ export default function ExpandableStats({ metrics, isLoading, onMetricTap }: Exp
 
   if (metrics.sleep) {
     const hours = metrics.sleep.lastNightHours;
+    const avgHours = metrics.sleep.avgWeekHours;
     const progress = (hours / 9) * 100; // 9 hours = 100%
     // Mock 7-day sleep data showing improvement
     const sleepSparkline = [6.5, 7.0, 6.2, 7.4, 6.8, 7.2, hours];
     rows.push({
       label: 'Sleep',
-      value: `${hours}h`,
-      subtext: `avg ${metrics.sleep.avgWeekHours}h/night`,
+      value: `${hours.toFixed(1)}h`,
+      subtext: `avg ${avgHours.toFixed(1)}h/night`,
       progress,
-      trend: hours > metrics.sleep.avgWeekHours ? 'up' : hours < metrics.sleep.avgWeekHours ? 'down' : 'stable',
-      trendGood: hours >= metrics.sleep.avgWeekHours,
+      trend: hours > avgHours ? 'up' : hours < avgHours ? 'down' : 'stable',
+      trendGood: hours >= avgHours,
       sparkline: sleepSparkline,
       onClick: () => handleTap('sleep'),
     });

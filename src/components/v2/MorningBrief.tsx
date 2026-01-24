@@ -52,12 +52,13 @@ function generateBrief(name: string, metrics: HealthMetrics | null): BriefResult
 
   // Sleep commentary - more detailed
   if (metrics.sleep) {
-    const hours = metrics.sleep.lastNightHours;
+    const hours = Number(metrics.sleep.lastNightHours.toFixed(1));
     const quality = metrics.sleep.quality;
-    const avgWeek = metrics.sleep.avgWeekHours;
+    const avgWeek = Number(metrics.sleep.avgWeekHours.toFixed(1));
+    const diff = Number((hours - avgWeek).toFixed(1));
 
     if (hours >= 7.5 && quality === 'excellent') {
-      parts.push(`Great night—${hours} hours with excellent quality. That's ${(hours - avgWeek).toFixed(1)}h above your weekly average.`);
+      parts.push(`Great night—${hours} hours with excellent quality. That's ${diff}h above your weekly average.`);
       tip = "Your body's in a good recovery window. Consider something more challenging today if you've been wanting to push.";
     } else if (hours >= 7) {
       parts.push(`Solid ${hours} hours of ${quality} sleep. Slightly above your ${avgWeek}h average.`);
