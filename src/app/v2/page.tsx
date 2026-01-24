@@ -76,10 +76,10 @@ export default function TodayPage() {
 
   // Skip onboarding check for v2 preview
 
-  // Fetch data on mount
+  // Fetch data on mount - force refresh to get latest metrics
   useEffect(() => {
     if (profile?.onboardingCompleted) {
-      fetchHomeData();
+      fetchHomeData(true); // Force refresh to bypass cache
       fetchProactiveInsights();
     }
   }, [profile?.onboardingCompleted, fetchHomeData, fetchProactiveInsights]);

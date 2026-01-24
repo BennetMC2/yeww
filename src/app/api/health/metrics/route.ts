@@ -54,6 +54,10 @@ export async function GET(request: NextRequest) {
       hasData: true,
       lastSync: data?.[0]?.created_at || null,
       metrics,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      },
     });
   } catch (error) {
     console.error('Health metrics API error:', error);
