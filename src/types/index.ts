@@ -303,6 +303,7 @@ export interface DetectedPattern {
 // Proactive insight types
 export type ProactiveInsightType = 'notable_change' | 'pattern' | 'milestone' | 'concern';
 export type ProactiveInsightPriority = 'high' | 'medium' | 'low';
+export type InsightMetricType = 'steps' | 'sleep_hours' | 'hrv' | 'rhr' | 'recovery';
 
 export interface ProactiveInsight {
   id: string;
@@ -313,6 +314,13 @@ export interface ProactiveInsight {
   dataContext?: Record<string, unknown>;
   createdAt: string;
   read: boolean;
+  // New fields for deduplication and dual comparison
+  metricType?: InsightMetricType;
+  metricDate?: string; // ISO date string (YYYY-MM-DD)
+  todayValue?: number;
+  yesterdayValue?: number;
+  baseline7day?: number;
+  updatedAt?: string;
 }
 
 export interface PromptContext {
