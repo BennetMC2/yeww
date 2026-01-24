@@ -136,10 +136,20 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
     }
 
     // Group by type and get most recent of each
+    // For daily data, prefer the payload with the most body_battery_samples (full day's data)
     const latestByType: Record<string, TerraPayload> = {};
     for (const payload of payloads) {
       if (!latestByType[payload.type]) {
         latestByType[payload.type] = payload;
+      } else if (payload.type === 'daily') {
+        // For daily, prefer the one with more body_battery_samples (more complete data)
+        const currentData = latestByType[payload.type].data as { stress_data?: { body_battery_samples?: unknown[] } };
+        const newData = payload.data as { stress_data?: { body_battery_samples?: unknown[] } };
+        const currentSamples = currentData?.stress_data?.body_battery_samples?.length || 0;
+        const newSamples = newData?.stress_data?.body_battery_samples?.length || 0;
+        if (newSamples > currentSamples) {
+          latestByType[payload.type] = payload;
+        }
       }
     }
 
