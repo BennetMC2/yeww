@@ -337,3 +337,69 @@ export interface PromptContext {
   detectedPatterns?: DetectedPattern[];
   recentTopics?: string[];
 }
+
+// ============================================
+// Rewards & Proof System Types
+// ============================================
+
+export type ReputationTier = 'starter' | 'verified' | 'trusted' | 'elite';
+
+export interface UserRewards {
+  userId: string;
+  hpBalance: number;
+  lifetimeEarned: number;
+  reputationScore: number;
+  reputationTier: ReputationTier;
+}
+
+export type HPTransactionType = 'earn_behavior' | 'earn_sharing' | 'redeem' | 'bonus';
+
+export interface HPTransaction {
+  id: string;
+  userId: string;
+  amount: number;
+  type: HPTransactionType;
+  description: string;
+  referenceId?: string;
+  createdAt: string;
+}
+
+export type RequirementType = 'steps_avg' | 'sleep_avg' | 'recovery_avg' | 'hrv_avg' | 'rhr_avg';
+
+export interface ProofOpportunity {
+  id: string;
+  title: string;
+  description: string;
+  partnerName: string;
+  partnerLogo?: string;
+  hpReward: number;
+  requirementType: RequirementType;
+  requirementThreshold: number;
+  requirementDays: number;
+  expiresAt?: string;
+  isActive: boolean;
+  maxClaims?: number;
+  currentClaims?: number;
+}
+
+export type ProofStatus = 'pending' | 'verified' | 'claimed' | 'failed';
+
+export interface UserProof {
+  id: string;
+  userId: string;
+  opportunityId: string;
+  status: ProofStatus;
+  proofHash?: string;
+  verifiedAt?: string;
+  hpAwarded?: number;
+  createdAt: string;
+}
+
+export interface DailyRewardClaim {
+  id: string;
+  userId: string;
+  claimDate: string;
+  rewardType: 'steps' | 'sleep' | 'recovery';
+  hpAwarded: number;
+  createdAt: string;
+}

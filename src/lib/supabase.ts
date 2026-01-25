@@ -135,3 +135,61 @@ export interface DbWorkout {
   source: string | null;
   external_id: string | null;
 }
+
+// Rewards system types
+export interface DbUserRewards {
+  user_id: string;
+  hp_balance: number;
+  lifetime_earned: number;
+  reputation_score: number;
+  reputation_tier: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbHPTransaction {
+  id: string;
+  user_id: string;
+  amount: number;
+  type: string;
+  description: string;
+  reference_id: string | null;
+  created_at: string;
+}
+
+export interface DbProofOpportunity {
+  id: string;
+  title: string;
+  description: string;
+  partner_name: string;
+  partner_logo: string | null;
+  hp_reward: number;
+  requirement_type: string;
+  requirement_threshold: number;
+  requirement_days: number;
+  expires_at: string | null;
+  is_active: boolean;
+  max_claims: number | null;
+  current_claims: number;
+  created_at: string;
+}
+
+export interface DbUserProof {
+  id: string;
+  user_id: string;
+  opportunity_id: string;
+  status: string;
+  proof_hash: string | null;
+  verified_at: string | null;
+  hp_awarded: number | null;
+  created_at: string;
+}
+
+export interface DbDailyRewardClaim {
+  id: string;
+  user_id: string;
+  claim_date: string;
+  reward_type: string;
+  hp_awarded: number;
+  created_at: string;
+}

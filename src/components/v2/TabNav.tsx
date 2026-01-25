@@ -6,6 +6,7 @@ import Link from 'next/link';
 const tabs = [
   { href: '/v2', label: 'Today' },
   { href: '/v2/journey', label: 'Journey' },
+  { href: '/v2/rewards', label: 'Rewards' },
 ];
 
 export default function TabNav() {

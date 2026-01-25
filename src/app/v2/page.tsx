@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, Camera, FlaskConical } from 'lucide-react';
+import { Scale, Camera, FlaskConical, Zap, ChevronRight } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import MorningBrief from '@/components/v2/MorningBrief';
 import ExpandableStats from '@/components/v2/ExpandableStats';
@@ -10,7 +10,8 @@ import ProactiveInsightCard from '@/components/ProactiveInsightCard';
 import WeightEntryModal from '@/components/data/WeightEntryModal';
 import ScreenshotImportModal from '@/components/data/ScreenshotImportModal';
 import PatternCard from '@/components/insights/PatternCard';
-import { ProactiveInsight, HealthMetrics, DetectedPattern } from '@/types';
+import Link from 'next/link';
+import { ProactiveInsight, HealthMetrics, DetectedPattern, ProofOpportunity } from '@/types';
 
 // Mock metrics for demo
 const MOCK_METRICS: HealthMetrics = {
@@ -73,6 +74,7 @@ export default function TodayPage() {
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showScreenshotModal, setShowScreenshotModal] = useState(false);
   const [patterns, setPatterns] = useState<DetectedPattern[]>([]);
+  const [eligibleOpportunity, setEligibleOpportunity] = useState<(ProofOpportunity & { isEligible: boolean }) | null>(null);
 
   // Skip onboarding check for v2 preview
 
@@ -111,6 +113,30 @@ export default function TodayPage() {
       }
     }
     fetchPatterns();
+  }, [profile?.id]);
+
+  // Fetch eligible opportunities for teaser
+  useEffect(() => {
+    async function fetchOpportunities() {
+      const userId = profile?.id || 'demo-user';
+      try {
+        const response = await fetch(`/api/proofs/opportunities?userId=${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          // Find the first eligible, unclaimed opportunity
+          const eligible = data.opportunities?.find(
+            (o: ProofOpportunity & { isEligible: boolean; alreadyClaimed: boolean }) =>
+              o.isEligible && !o.alreadyClaimed
+          );
+          if (eligible) {
+            setEligibleOpportunity(eligible);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching opportunities:', err);
+      }
+    }
+    fetchOpportunities();
   }, [profile?.id]);
 
   // Handle discussing a proactive insight
@@ -200,6 +226,29 @@ export default function TodayPage() {
           />
         ))}
       </div>
+
+      {/* Opportunity Teaser */}
+      {eligibleOpportunity && (
+        <Link
+          href="/v2/rewards"
+          className="block bg-gradient-to-r from-[#E07A5F]/10 to-[#F4A261]/10 border border-[#E07A5F]/20 rounded-xl p-4 hover:from-[#E07A5F]/15 hover:to-[#F4A261]/15 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#E07A5F]/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-[#E07A5F]" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[#2D2A26]">Ready to earn!</p>
+                <p className="text-xs text-[#8A8580]">
+                  {eligibleOpportunity.title} - {eligibleOpportunity.hpReward} HP
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-[#8A8580]" />
+          </div>
+        </Link>
+      )}
 
       {/* Morning Brief */}
       <MorningBrief

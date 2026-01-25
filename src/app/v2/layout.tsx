@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import TabNav from '@/components/v2/TabNav';
 import ProfileModal from '@/components/v2/ProfileModal';
+import { Zap } from 'lucide-react';
+import Link from 'next/link';
 
 import { UserProfile, ConnectedApp } from '@/types';
 
@@ -33,9 +35,27 @@ const MOCK_PROFILE: UserProfile = {
 export default function V2Layout({ children }: { children: React.ReactNode }) {
   const { profile } = useApp();
   const [showProfile, setShowProfile] = useState(false);
+  const [hpBalance, setHpBalance] = useState<number | null>(null);
 
   // Use mock profile if not onboarded
   const displayProfile = profile?.onboardingCompleted ? profile : MOCK_PROFILE;
+
+  // Fetch HP balance
+  useEffect(() => {
+    async function fetchBalance() {
+      const userId = profile?.id || 'demo-user';
+      try {
+        const res = await fetch(`/api/rewards/balance?userId=${userId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setHpBalance(data.hpBalance);
+        }
+      } catch (error) {
+        console.error('Error fetching HP balance:', error);
+      }
+    }
+    fetchBalance();
+  }, [profile?.id]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -51,6 +71,16 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
           <div>
             <p className="text-sm text-[#8A8580]">{today}</p>
           </div>
+          {/* HP Balance Pill */}
+          {hpBalance !== null && (
+            <Link
+              href="/v2/rewards"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E07A5F]/10 hover:bg-[#E07A5F]/20 transition-colors"
+            >
+              <Zap className="w-3.5 h-3.5 text-[#E07A5F]" />
+              <span className="text-xs font-semibold text-[#E07A5F]">{hpBalance.toLocaleString()}</span>
+            </Link>
+          )}
           <button
             onClick={() => setShowProfile(true)}
             className="relative flex items-center gap-2 group"
