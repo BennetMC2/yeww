@@ -14,7 +14,7 @@ import {
   ReputationTier,
 } from '@/types';
 
-// Mock data for demo
+// Mock data for demo - simulates an active user ~1 week in
 const MOCK_REWARDS: UserRewards = {
   userId: 'demo',
   hpBalance: 450,
@@ -23,6 +23,7 @@ const MOCK_REWARDS: UserRewards = {
   reputationTier: 'verified',
 };
 
+const DAY_MS = 86400000;
 const MOCK_TRANSACTIONS: HPTransaction[] = [
   {
     id: '1',
@@ -35,18 +36,114 @@ const MOCK_TRANSACTIONS: HPTransaction[] = [
   {
     id: '2',
     userId: 'demo',
-    amount: 100,
-    type: 'earn_sharing',
-    description: 'Verified: Step Champion',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    amount: 10,
+    type: 'earn_behavior',
+    description: 'Got 7+ hours of sleep',
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
   },
   {
     id: '3',
     userId: 'demo',
+    amount: 100,
+    type: 'earn_sharing',
+    description: 'Verified: Sleep Champion proof',
+    createdAt: new Date(Date.now() - DAY_MS).toISOString(),
+  },
+  {
+    id: '4',
+    userId: 'demo',
+    amount: 5,
+    type: 'earn_behavior',
+    description: 'Recovery above 70+',
+    createdAt: new Date(Date.now() - 2 * DAY_MS).toISOString(),
+  },
+  {
+    id: '5',
+    userId: 'demo',
+    amount: 10,
+    type: 'earn_behavior',
+    description: 'Hit 8k+ steps',
+    createdAt: new Date(Date.now() - 3 * DAY_MS).toISOString(),
+  },
+  {
+    id: '6',
+    userId: 'demo',
+    amount: 100,
+    type: 'bonus',
+    description: 'First wearable connected',
+    createdAt: new Date(Date.now() - 4 * DAY_MS).toISOString(),
+  },
+  {
+    id: '7',
+    userId: 'demo',
+    amount: 50,
+    type: 'bonus',
+    description: 'Welcome bonus',
+    createdAt: new Date(Date.now() - 5 * DAY_MS).toISOString(),
+  },
+  {
+    id: '8',
+    userId: 'demo',
     amount: 10,
     type: 'earn_behavior',
     description: 'Got 7+ hours of sleep',
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    createdAt: new Date(Date.now() - 6 * DAY_MS).toISOString(),
+  },
+  {
+    id: '9',
+    userId: 'demo',
+    amount: 25,
+    type: 'bonus',
+    description: 'Completed onboarding',
+    createdAt: new Date(Date.now() - 7 * DAY_MS).toISOString(),
+  },
+];
+
+// Mock opportunities showing different states
+const MOCK_OPPORTUNITIES: (ProofOpportunity & { isEligible: boolean; actualValue?: number; alreadyClaimed: boolean })[] = [
+  {
+    id: 'opp-1',
+    title: 'Sleep Champion',
+    description: 'Prove you consistently get quality sleep. Share your 3-day sleep average to earn HP.',
+    partnerName: 'Sleep Research Co',
+    hpReward: 100,
+    requirementType: 'sleep_avg',
+    requirementThreshold: 7,
+    requirementDays: 3,
+    expiresAt: new Date(Date.now() + 5 * DAY_MS).toISOString(),
+    isActive: true,
+    isEligible: true,
+    actualValue: 7.8,
+    alreadyClaimed: false,
+  },
+  {
+    id: 'opp-2',
+    title: 'Step Streak Master',
+    description: 'Show your commitment to daily movement with a 5-day step streak above 8,000 steps.',
+    partnerName: 'FitLife Insurance',
+    hpReward: 150,
+    requirementType: 'steps_avg',
+    requirementThreshold: 8000,
+    requirementDays: 5,
+    expiresAt: new Date(Date.now() + 10 * DAY_MS).toISOString(),
+    isActive: true,
+    isEligible: false,
+    actualValue: 6500,
+    alreadyClaimed: false,
+  },
+  {
+    id: 'opp-3',
+    title: 'Recovery Pro',
+    description: 'Demonstrate excellent recovery habits with a high recovery score.',
+    partnerName: 'Wellness Inc',
+    hpReward: 75,
+    requirementType: 'recovery_avg',
+    requirementThreshold: 80,
+    requirementDays: 3,
+    isActive: true,
+    isEligible: true,
+    actualValue: 85,
+    alreadyClaimed: true,
   },
 ];
 
@@ -66,15 +163,15 @@ export default function RewardsPage() {
 
   const [rewards, setRewards] = useState<UserRewards>(MOCK_REWARDS);
   const [transactions, setTransactions] = useState<HPTransaction[]>(MOCK_TRANSACTIONS);
-  const [opportunities, setOpportunities] = useState<(ProofOpportunity & { isEligible: boolean; actualValue?: number; alreadyClaimed: boolean })[]>([]);
+  const [opportunities, setOpportunities] = useState<(ProofOpportunity & { isEligible: boolean; actualValue?: number; alreadyClaimed: boolean })[]>(MOCK_OPPORTUNITIES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<ProofOpportunity | null>(null);
   const [dailyGoals, setDailyGoals] = useState<DailyGoal[]>([
-    { type: 'steps', label: '8k Steps', description: 'Hit 8,000+ steps today', reward: 10, icon: Footprints, met: false, claimed: false },
-    { type: 'sleep', label: '7h Sleep', description: 'Get 7+ hours of sleep', reward: 10, icon: Moon, met: false, claimed: false },
-    { type: 'recovery', label: '70+ Recovery', description: 'Recovery score of 70+', reward: 5, icon: Battery, met: false, claimed: false },
+    { type: 'steps', label: '8k Steps', description: 'Hit 8,000+ steps today', reward: 10, icon: Footprints, met: true, claimed: false }, // Met but not claimed - prompts "Check rewards"
+    { type: 'sleep', label: '7h Sleep', description: 'Get 7+ hours of sleep', reward: 10, icon: Moon, met: true, claimed: true }, // Already claimed today
+    { type: 'recovery', label: '70+ Recovery', description: 'Recovery score of 70+', reward: 5, icon: Battery, met: false, claimed: false }, // Not met yet
   ]);
   const [checkingDaily, setCheckingDaily] = useState(false);
   const [healthScore, setHealthScore] = useState(72);
@@ -112,12 +209,13 @@ export default function RewardsPage() {
         }
       }
 
-      // Fetch opportunities
+      // Fetch opportunities - only update if we get real data
       if (oppRes.ok) {
         const oppData = await oppRes.json();
-        if (oppData.opportunities) {
+        if (oppData.opportunities && oppData.opportunities.length > 0) {
           setOpportunities(oppData.opportunities);
         }
+        // Keep mock opportunities if API returns empty
       }
 
       // Fetch health metrics to determine daily goal status
