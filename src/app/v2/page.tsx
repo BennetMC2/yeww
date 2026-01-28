@@ -97,7 +97,7 @@ export default function TodayPage() {
 
   // Skip onboarding check for v2 preview
 
-  // Fetch data on mount - use refs to prevent multiple triggers from callback identity changes
+  // Fetch all data on mount - consolidated to prevent multiple re-renders
   useEffect(() => {
     // Only fetch once when profile is ready and onboarding is completed
     if (profile?.onboardingCompleted && !hasFetchedRef.current) {
@@ -108,11 +108,45 @@ export default function TodayPage() {
         setIsLoadingInsights(true);
         setError(null);
 
-        // Fetch home data and insights
+        const userId = profile.id;
+
+        // Fetch all data in parallel
         Promise.all([
           fetchHomeData(true), // Force refresh to bypass cache
           fetchProactiveInsights(),
+          // Fetch patterns
+          fetch(`/api/insights/patterns?userId=${userId}`)
+            .then(res => res.ok ? res.json() : { patterns: [] })
+            .catch(() => ({ patterns: [] })),
+          // Fetch opportunities
+          fetch(`/api/proofs/opportunities?userId=${userId}`)
+            .then(res => res.ok ? res.json() : { opportunities: [] })
+            .catch(() => ({ opportunities: [] })),
         ])
+          .then(([, , patternsData, opportunitiesData]) => {
+            // Set patterns
+            if (patternsData.patterns) {
+              setPatterns(patternsData.patterns.map((p: PatternResponse) => ({
+                id: p.id,
+                description: p.description,
+                confidence: p.confidence,
+                lastTriggered: p.lastObserved,
+                metricA: p.metricA,
+                metricB: p.metricB,
+                correlationStrength: p.correlationStrength,
+                direction: p.direction,
+                sampleSize: p.sampleSize,
+              })));
+            }
+            // Set eligible opportunity
+            const eligible = opportunitiesData.opportunities?.find(
+              (o: ProofOpportunity & { isEligible: boolean; alreadyClaimed: boolean }) =>
+                o.isEligible && !o.alreadyClaimed
+            );
+            if (eligible) {
+              setEligibleOpportunity(eligible);
+            }
+          })
           .catch((err) => {
             console.error('Error fetching initial data:', err);
             setError('Failed to load some data. Pull down to refresh.');
@@ -123,61 +157,6 @@ export default function TodayPage() {
       }
     }
   }, [profile?.onboardingCompleted, profile?.id, fetchHomeData, fetchProactiveInsights]);
-
-  // Fetch patterns - memoized to prevent unnecessary re-fetches
-  const fetchPatterns = useCallback(async () => {
-    if (!profile?.id) return;
-    try {
-      const response = await fetch(`/api/insights/patterns?userId=${profile.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.patterns) {
-          setPatterns(data.patterns.map((p: PatternResponse) => ({
-            id: p.id,
-            description: p.description,
-            confidence: p.confidence,
-            lastTriggered: p.lastObserved,
-            metricA: p.metricA,
-            metricB: p.metricB,
-            correlationStrength: p.correlationStrength,
-            direction: p.direction,
-            sampleSize: p.sampleSize,
-          })));
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching patterns:', err);
-    }
-  }, [profile?.id]);
-
-  // Fetch patterns on mount
-  useEffect(() => {
-    fetchPatterns();
-  }, [fetchPatterns]);
-
-  // Fetch eligible opportunities for teaser
-  useEffect(() => {
-    async function fetchOpportunities() {
-      const userId = profile?.id || 'demo-user';
-      try {
-        const response = await fetch(`/api/proofs/opportunities?userId=${userId}`);
-        if (response.ok) {
-          const data = await response.json();
-          // Find the first eligible, unclaimed opportunity
-          const eligible = data.opportunities?.find(
-            (o: ProofOpportunity & { isEligible: boolean; alreadyClaimed: boolean }) =>
-              o.isEligible && !o.alreadyClaimed
-          );
-          if (eligible) {
-            setEligibleOpportunity(eligible);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching opportunities:', err);
-      }
-    }
-    fetchOpportunities();
-  }, [profile?.id]);
 
   // Handle discussing a proactive insight
   const handleDiscussInsight = (insight: ProactiveInsight) => {
@@ -255,7 +234,10 @@ export default function TodayPage() {
   const usingMockInsights = proactiveInsights.length === 0;
 
   // Use mock insight for demo if no real insights
-  const displayInsights = proactiveInsights.length > 0 ? proactiveInsights : [MOCK_INSIGHT];
+  // Limit to 2 most recent insights to avoid overwhelming the user
+  const displayInsights = proactiveInsights.length > 0
+    ? proactiveInsights.slice(0, 2)
+    : [MOCK_INSIGHT];
 
   return (
     <div className="px-6 pb-6 space-y-4">
