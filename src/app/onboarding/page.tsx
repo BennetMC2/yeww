@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Check, Sparkles, Loader2 } from 'lucide-react';
+import { ChevronLeft, Check, Loader2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Button, Input, ProgressBar, Confetti } from '@/components/ui';
 import { useApp } from '@/contexts/AppContext';
@@ -76,44 +76,17 @@ const FadeIn = ({
   </div>
 );
 
-// Brand colors for data sources
-const BRAND_COLORS: Record<string, { gradient: string; iconBg: string }> = {
-  'apple-health': {
-    gradient: 'from-red-400 to-red-500',
-    iconBg: 'bg-gradient-to-br from-red-400 to-red-500',
-  },
-  'oura': {
-    gradient: 'from-gray-300 to-gray-400',
-    iconBg: 'bg-gradient-to-br from-gray-300 to-gray-400',
-  },
-  'whoop': {
-    gradient: 'from-blue-400 to-blue-600',
-    iconBg: 'bg-gradient-to-br from-blue-400 to-blue-600',
-  },
-  'garmin': {
-    gradient: 'from-blue-300 to-blue-500',
-    iconBg: 'bg-gradient-to-br from-blue-300 to-blue-500',
-  },
-  'fitbit': {
-    gradient: 'from-teal-400 to-teal-500',
-    iconBg: 'bg-gradient-to-br from-teal-400 to-teal-500',
-  },
-  'google-fit': {
-    gradient: 'from-green-400 to-blue-400',
-    iconBg: 'bg-gradient-to-br from-green-400 to-blue-400',
-  },
-  'strava': {
-    gradient: 'from-orange-400 to-orange-500',
-    iconBg: 'bg-gradient-to-br from-orange-400 to-orange-500',
-  },
-  'peloton': {
-    gradient: 'from-red-500 to-red-600',
-    iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
-  },
-  'withings': {
-    gradient: 'from-blue-400 to-cyan-400',
-    iconBg: 'bg-gradient-to-br from-blue-400 to-cyan-400',
-  },
+// Brand colors for data sources - using CSS gradient values for inline styles
+const BRAND_COLORS: Record<string, string> = {
+  'apple-health': 'linear-gradient(135deg, #F87171 0%, #EF4444 100%)',
+  'oura': 'linear-gradient(135deg, #9CA3AF 0%, #6B7280 100%)',
+  'whoop': 'linear-gradient(135deg, #60A5FA 0%, #2563EB 100%)',
+  'garmin': 'linear-gradient(135deg, #93C5FD 0%, #3B82F6 100%)',
+  'fitbit': 'linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%)',
+  'google-fit': 'linear-gradient(135deg, #4ADE80 0%, #60A5FA 100%)',
+  'strava': 'linear-gradient(135deg, #FB923C 0%, #F97316 100%)',
+  'peloton': 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+  'withings': 'linear-gradient(135deg, #60A5FA 0%, #22D3EE 100%)',
 };
 
 // Data source card with icon and brand colors
@@ -147,7 +120,7 @@ const DataSourceCard = ({
         className="w-9 h-9 rounded-[10px] flex items-center justify-center mb-2"
         style={{
           background: brandColor
-            ? undefined
+            ? brandColor
             : selected
             ? 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)'
             : 'linear-gradient(135deg, #F5EDE4 0%, #EBE3DA 100%)',
@@ -867,11 +840,6 @@ export default function OnboardingPage() {
         {step === 5 && (
           <>
             <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-              <FadeIn visible={messagesVisible >= 1} className="mb-6">
-                <div className="w-20 h-20 rounded-full bg-[#FFE8DC] flex items-center justify-center">
-                  <Sparkles className="w-10 h-10 text-[#E07A5F]" />
-                </div>
-              </FadeIn>
               <Message visible={messagesVisible >= 1} size="xl">
                 Meet yeww.
               </Message>
