@@ -245,7 +245,7 @@ export default function TodayPage() {
     <div className="px-6 pb-6 space-y-4">
       {/* Error Banner */}
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 animate-fade-in">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{error}</span>
         </div>
@@ -253,26 +253,31 @@ export default function TodayPage() {
 
       {/* Mock Data Indicator */}
       {(usingMockMetrics || usingMockInsights) && !isLoadingInsights && (
-        <div className="text-xs text-amber-600 text-center py-1">
+        <div className="text-xs text-amber-600 text-center py-1 animate-fade-in">
           Using demo data — connect your wearable for real metrics
         </div>
       )}
 
       {/* Proactive Insights */}
-      <div>
+      <div className="animate-fade-in">
         {isLoadingInsights ? (
           <div className="bg-white rounded-2xl p-4 animate-pulse">
             <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
             <div className="h-4 bg-gray-200 rounded w-1/2" />
           </div>
         ) : (
-          displayInsights.map((insight) => (
-            <ProactiveInsightCard
+          displayInsights.map((insight, index) => (
+            <div
               key={insight.id}
-              insight={insight}
-              onDismiss={dismissInsight}
-              onDiscuss={handleDiscussInsight}
-            />
+              className="animate-on-load animate-scale-in"
+              style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
+            >
+              <ProactiveInsightCard
+                insight={insight}
+                onDismiss={dismissInsight}
+                onDiscuss={handleDiscussInsight}
+              />
+            </div>
           ))
         )}
       </div>
@@ -281,11 +286,11 @@ export default function TodayPage() {
       {eligibleOpportunity && (
         <Link
           href="/v2/rewards"
-          className="block bg-gradient-to-r from-[#E07A5F]/10 to-[#F4A261]/10 border border-[#E07A5F]/20 rounded-xl p-4 hover:from-[#E07A5F]/15 hover:to-[#F4A261]/15 transition-colors"
+          className="block bg-gradient-to-r from-[#E07A5F]/10 to-[#F4A261]/10 border border-[#E07A5F]/20 rounded-xl p-4 hover:from-[#E07A5F]/15 hover:to-[#F4A261]/15 transition-colors animate-on-load animate-slide-in-right stagger-1"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#E07A5F]/20 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-[#E07A5F]/20 flex items-center justify-center animate-glow">
                 <Zap className="w-5 h-5 text-[#E07A5F]" />
               </div>
               <div>
@@ -301,58 +306,67 @@ export default function TodayPage() {
       )}
 
       {/* Morning Brief */}
-      <MorningBrief
-        name={displayProfile.name}
-        metrics={displayMetrics}
-        isLoading={false}
-      />
+      <div className="animate-on-load animate-fade-in stagger-1">
+        <MorningBrief
+          name={displayProfile.name}
+          metrics={displayMetrics}
+          isLoading={false}
+        />
+      </div>
 
       {/* Expandable Stats */}
-      <ExpandableStats
-        metrics={displayMetrics}
-        isLoading={false}
-        onMetricTap={handleMetricTap}
-      />
+      <div className="animate-on-load animate-fade-in stagger-2">
+        <ExpandableStats
+          metrics={displayMetrics}
+          isLoading={false}
+          onMetricTap={handleMetricTap}
+        />
+      </div>
 
       {/* Detected Patterns */}
       {patterns.length > 0 && (
-        <div className="pt-2">
+        <div className="pt-2 animate-on-load animate-fade-in stagger-3">
           <h3 className="text-sm font-medium text-[#8A8580] mb-2">Your Patterns</h3>
           <div className="space-y-2">
-            {patterns.slice(0, 3).map((pattern) => (
-              <PatternCard
+            {patterns.slice(0, 3).map((pattern, index) => (
+              <div
                 key={pattern.id}
-                pattern={{
-                  id: pattern.id,
-                  description: pattern.description,
-                  metricA: pattern.metricA || '',
-                  metricB: pattern.metricB,
-                  correlationStrength: pattern.correlationStrength,
-                  confidence: pattern.confidence,
-                  direction: pattern.direction,
-                  sampleSize: pattern.sampleSize,
-                }}
-                onTap={handlePatternTap}
-              />
+                className="animate-on-load animate-slide-in-right"
+                style={{ animationDelay: `${400 + index * 100}ms`, animationFillMode: 'forwards' }}
+              >
+                <PatternCard
+                  pattern={{
+                    id: pattern.id,
+                    description: pattern.description,
+                    metricA: pattern.metricA || '',
+                    metricB: pattern.metricB,
+                    correlationStrength: pattern.correlationStrength,
+                    confidence: pattern.confidence,
+                    direction: pattern.direction,
+                    sampleSize: pattern.sampleSize,
+                  }}
+                  onTap={handlePatternTap}
+                />
+              </div>
             ))}
           </div>
         </div>
       )}
 
       {/* Data Sources */}
-      <div className="pt-2">
+      <div className="pt-2 animate-on-load animate-fade-in stagger-4">
         <h3 className="text-sm font-medium text-[#8A8580] mb-2">Add Data</h3>
         <div className="flex gap-2">
           <button
             onClick={() => setShowWeightModal(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-white rounded-xl text-[#2D2A26] hover:bg-[#F5EDE4] transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-white rounded-xl text-[#2D2A26] hover:bg-[#F5EDE4] hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
             <Scale className="w-4 h-4 text-[#E07A5F]" />
             <span className="text-sm font-medium">Weight</span>
           </button>
           <button
             onClick={() => setShowScreenshotModal(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-white rounded-xl text-[#2D2A26] hover:bg-[#F5EDE4] transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-white rounded-xl text-[#2D2A26] hover:bg-[#F5EDE4] hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
             <Camera className="w-4 h-4 text-[#E07A5F]" />
             <span className="text-sm font-medium">Screenshot</span>
@@ -368,7 +382,7 @@ export default function TodayPage() {
       </div>
 
       {/* Chat Input */}
-      <div className="pt-2">
+      <div className="pt-2 animate-on-load animate-fade-in stagger-5">
         <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 shadow-sm">
           <input
             type="text"
@@ -381,7 +395,7 @@ export default function TodayPage() {
           <button
             onClick={handleSend}
             disabled={!inputValue.trim()}
-            className="w-9 h-9 rounded-full bg-[#E07A5F] text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:bg-[#D36B4F]"
+            className="w-9 h-9 rounded-full bg-[#E07A5F] text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:bg-[#D36B4F] hover:scale-105 active:scale-95"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />

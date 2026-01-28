@@ -150,7 +150,7 @@ export default function JourneyPage() {
   return (
     <div className="px-6 pb-6">
       {/* Health Score Trend */}
-      <div className="bg-white rounded-2xl p-5 mb-4">
+      <div className="bg-white rounded-2xl p-5 mb-4 animate-fade-in">
         <h3 className="text-xs font-medium text-[#8A8580] uppercase tracking-wider mb-3">
           Health Score Over Time
         </h3>
@@ -172,7 +172,13 @@ export default function JourneyPage() {
             <div
               key={i}
               className={`flex-1 rounded-t transition-all ${i === 6 ? 'bg-[#E07A5F]' : 'bg-[#FFE8DC]'}`}
-              style={{ height: `${(score / 100) * 100}%` }}
+              style={{
+                height: `${(score / 100) * 100}%`,
+                animation: 'slideInUp 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                animationDelay: `${i * 50}ms`,
+                opacity: 0,
+                transform: 'translateY(100%)',
+              }}
             />
           ))}
         </div>
@@ -183,13 +189,13 @@ export default function JourneyPage() {
       </div>
 
       {/* Milestones & Timeline */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 animate-on-load animate-fade-in stagger-1">
         <h3 className="text-xs font-medium text-[#8A8580] uppercase tracking-wider">
           Your Journey
         </h3>
         <button
           onClick={() => setShowAddMenu(true)}
-          className="w-8 h-8 rounded-full bg-[#E07A5F] text-white flex items-center justify-center hover:bg-[#D36B4F] transition-colors"
+          className="w-8 h-8 rounded-full bg-[#E07A5F] text-white flex items-center justify-center hover:bg-[#D36B4F] hover:scale-110 active:scale-95 transition-all"
         >
           <Plus className="w-4 h-4" />
         </button>
@@ -197,8 +203,12 @@ export default function JourneyPage() {
 
       {hasRealEntries ? (
         <div className="space-y-3">
-          {progress.entries.map((entry) => (
-            <div key={entry.id} className="bg-white rounded-2xl p-3">
+          {progress.entries.map((entry, index) => (
+            <div
+              key={entry.id}
+              className="bg-white rounded-2xl p-3 animate-on-load animate-slide-in-right hover:shadow-md transition-shadow"
+              style={{ animationDelay: `${200 + index * 100}ms`, animationFillMode: 'forwards' }}
+            >
               <div className="flex gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${entry.type === 'milestone' ? 'bg-[#FFE8DC]' : 'bg-[#F5EDE4]'}`}>
                   {entry.type === 'photo' && <ImageIcon className="w-5 h-5 text-[#8A8580]" />}
@@ -241,9 +251,9 @@ export default function JourneyPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl p-6">
+        <div className="bg-white rounded-2xl p-6 animate-on-load animate-scale-in stagger-1">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#FFE8DC] flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#FFE8DC] flex items-center justify-center animate-bounce-in">
               <Award className="w-8 h-8 text-[#E07A5F]" />
             </div>
             <h3 className="font-semibold text-[#2D2A26] mb-2">Your journey starts here</h3>
@@ -254,7 +264,10 @@ export default function JourneyPage() {
 
           {/* Motivational points */}
           <div className="space-y-3 mb-6">
-            <div className="flex items-start gap-3 p-3 bg-[#FAF6F1] rounded-xl">
+            <div
+              className="flex items-start gap-3 p-3 bg-[#FAF6F1] rounded-xl animate-on-load animate-slide-in-right"
+              style={{ animationDelay: '300ms', animationFillMode: 'forwards' }}
+            >
               <div className="w-8 h-8 rounded-full bg-[#FFE8DC] flex items-center justify-center flex-shrink-0 text-sm">
                 1
               </div>
@@ -263,7 +276,10 @@ export default function JourneyPage() {
                 <p className="text-xs text-[#8A8580]">Small daily actions compound into big results over time.</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-[#FAF6F1] rounded-xl">
+            <div
+              className="flex items-start gap-3 p-3 bg-[#FAF6F1] rounded-xl animate-on-load animate-slide-in-right"
+              style={{ animationDelay: '400ms', animationFillMode: 'forwards' }}
+            >
               <div className="w-8 h-8 rounded-full bg-[#FFE8DC] flex items-center justify-center flex-shrink-0 text-sm">
                 2
               </div>
@@ -272,7 +288,10 @@ export default function JourneyPage() {
                 <p className="text-xs text-[#8A8580]">The more you track, the smarter your insights become.</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-[#FAF6F1] rounded-xl">
+            <div
+              className="flex items-start gap-3 p-3 bg-[#FAF6F1] rounded-xl animate-on-load animate-slide-in-right"
+              style={{ animationDelay: '500ms', animationFillMode: 'forwards' }}
+            >
               <div className="w-8 h-8 rounded-full bg-[#FFE8DC] flex items-center justify-center flex-shrink-0 text-sm">
                 3
               </div>
@@ -285,7 +304,7 @@ export default function JourneyPage() {
 
           <button
             onClick={() => setShowAddMenu(true)}
-            className="w-full px-5 py-3 rounded-full bg-[#E07A5F] text-white text-sm font-medium hover:bg-[#D36B4F] transition-colors"
+            className="w-full px-5 py-3 rounded-full bg-[#E07A5F] text-white text-sm font-medium hover:bg-[#D36B4F] hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
             Add your first entry
           </button>
@@ -294,16 +313,16 @@ export default function JourneyPage() {
 
       {/* Add Menu Modal */}
       {showAddMenu && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50" onClick={() => setShowAddMenu(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 animate-fade-in" onClick={() => setShowAddMenu(false)}>
           <div
-            className="bg-[#FAF6F1] rounded-t-3xl w-full max-w-[430px] p-6"
+            className="bg-[#FAF6F1] rounded-t-3xl w-full max-w-[430px] p-6 animate-slide-in-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-[#2D2A26]">Add Entry</h3>
               <button
                 onClick={() => setShowAddMenu(false)}
-                className="p-2 rounded-full hover:bg-[#F5EDE4] transition-colors"
+                className="p-2 rounded-full hover:bg-[#F5EDE4] hover:rotate-90 transition-all"
               >
                 <X className="w-5 h-5 text-[#8A8580]" />
               </button>
@@ -311,7 +330,8 @@ export default function JourneyPage() {
             <div className="space-y-3">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center gap-4 p-4 rounded-xl bg-[#F5EDE4] hover:bg-[#EBE3DA] transition-colors text-left"
+                className="w-full flex items-center gap-4 p-4 rounded-xl bg-[#F5EDE4] hover:bg-[#EBE3DA] hover:scale-[1.02] active:scale-[0.98] transition-all text-left animate-on-load animate-slide-in-right"
+                style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}
               >
                 <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center">
                   <Camera className="w-6 h-6 text-[#E07A5F]" />
@@ -326,7 +346,8 @@ export default function JourneyPage() {
                   setShowNoteModal(true);
                   setShowAddMenu(false);
                 }}
-                className="w-full flex items-center gap-4 p-4 rounded-xl bg-[#F5EDE4] hover:bg-[#EBE3DA] transition-colors text-left"
+                className="w-full flex items-center gap-4 p-4 rounded-xl bg-[#F5EDE4] hover:bg-[#EBE3DA] hover:scale-[1.02] active:scale-[0.98] transition-all text-left animate-on-load animate-slide-in-right"
+                style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}
               >
                 <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center">
                   <FileText className="w-6 h-6 text-[#E07A5F]" />
@@ -350,14 +371,14 @@ export default function JourneyPage() {
 
       {/* Photo Modal */}
       {showPhotoModal && previewImage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#FAF6F1] rounded-2xl w-full max-w-[400px] overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-[#FAF6F1] rounded-2xl w-full max-w-[400px] overflow-hidden animate-scale-in">
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={previewImage} alt="Preview" className="w-full h-48 object-cover" />
               <button
                 onClick={() => { setShowPhotoModal(false); setPreviewImage(null); }}
-                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center"
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 hover:rotate-90 transition-all"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -370,7 +391,7 @@ export default function JourneyPage() {
                     <button
                       key={cat.value}
                       onClick={() => setSelectedCategory(cat.value)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCategory === cat.value ? 'bg-[#E07A5F] text-white' : 'bg-[#F5EDE4] text-[#8A8580]'}`}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all hover:scale-105 active:scale-95 ${selectedCategory === cat.value ? 'bg-[#E07A5F] text-white' : 'bg-[#F5EDE4] text-[#8A8580]'}`}
                     >
                       {cat.label}
                     </button>
@@ -386,11 +407,14 @@ export default function JourneyPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => { setShowPhotoModal(false); setPreviewImage(null); }}
-                  className="flex-1 px-5 py-3 rounded-full bg-[#F5EDE4] text-[#2D2A26] font-medium"
+                  className="flex-1 px-5 py-3 rounded-full bg-[#F5EDE4] text-[#2D2A26] font-medium hover:bg-[#EBE3DA] active:scale-[0.98] transition-all"
                 >
                   Cancel
                 </button>
-                <button onClick={handleAddPhoto} className="flex-1 px-5 py-3 rounded-full bg-[#E07A5F] text-white font-medium">
+                <button
+                  onClick={handleAddPhoto}
+                  className="flex-1 px-5 py-3 rounded-full bg-[#E07A5F] text-white font-medium hover:bg-[#D36B4F] active:scale-[0.98] transition-all"
+                >
                   Save
                 </button>
               </div>
@@ -401,11 +425,11 @@ export default function JourneyPage() {
 
       {/* Note Modal */}
       {showNoteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#FAF6F1] rounded-2xl w-full max-w-[400px] p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-[#FAF6F1] rounded-2xl w-full max-w-[400px] p-6 animate-scale-in">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[#2D2A26]">Add Note</h3>
-              <button onClick={() => setShowNoteModal(false)} className="p-2 rounded-full hover:bg-[#F5EDE4]">
+              <button onClick={() => setShowNoteModal(false)} className="p-2 rounded-full hover:bg-[#F5EDE4] hover:rotate-90 transition-all">
                 <X className="w-5 h-5 text-[#8A8580]" />
               </button>
             </div>
@@ -418,13 +442,13 @@ export default function JourneyPage() {
               autoFocus
             />
             <div className="flex gap-3 mt-4">
-              <button onClick={() => setShowNoteModal(false)} className="flex-1 px-5 py-3 rounded-full bg-[#F5EDE4] text-[#2D2A26] font-medium">
+              <button onClick={() => setShowNoteModal(false)} className="flex-1 px-5 py-3 rounded-full bg-[#F5EDE4] text-[#2D2A26] font-medium hover:bg-[#EBE3DA] active:scale-[0.98] transition-all">
                 Cancel
               </button>
               <button
                 onClick={handleAddNote}
                 disabled={!noteText.trim()}
-                className="flex-1 px-5 py-3 rounded-full bg-[#E07A5F] text-white font-medium disabled:opacity-40"
+                className="flex-1 px-5 py-3 rounded-full bg-[#E07A5F] text-white font-medium disabled:opacity-40 hover:bg-[#D36B4F] active:scale-[0.98] transition-all"
               >
                 Save
               </button>

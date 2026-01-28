@@ -139,9 +139,9 @@ export default function ProfilePage() {
 
       <main className="flex-1 px-6 py-6 overflow-y-auto">
         {/* Profile Info */}
-        <section className="mb-8">
+        <section className="mb-8 animate-fade-in">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-full bg-[#FFE8DC] flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-[#FFE8DC] flex items-center justify-center animate-bounce-in">
               <User className="w-8 h-8 text-[#E07A5F]" />
             </div>
             <div>
@@ -155,7 +155,7 @@ export default function ProfilePage() {
                   />
                   <button
                     onClick={handleSaveName}
-                    className="p-2 rounded-full bg-[#E07A5F] text-white"
+                    className="p-2 rounded-full bg-[#E07A5F] text-white hover:scale-110 active:scale-95 transition-transform"
                   >
                     <Check className="w-4 h-4" />
                   </button>
@@ -175,7 +175,7 @@ export default function ProfilePage() {
           {/* Stats Row */}
           <div className="grid grid-cols-2 gap-3">
             {/* Streak */}
-            <div className="bg-white rounded-2xl p-4 flex items-center gap-3">
+            <div className="bg-white rounded-2xl p-4 flex items-center gap-3 animate-on-load animate-scale-in" style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}>
               <div className="w-10 h-10 rounded-xl bg-[#FFE8DC] flex items-center justify-center">
                 <Flame className="w-5 h-5 text-[#E07A5F]" />
               </div>
@@ -188,7 +188,8 @@ export default function ProfilePage() {
             {/* Points */}
             <button
               onClick={() => setShowPointsHistory(true)}
-              className="bg-white rounded-2xl p-4 flex items-center gap-3 text-left hover:bg-[#FAFAFA] transition-colors"
+              className="bg-white rounded-2xl p-4 flex items-center gap-3 text-left hover:bg-[#FAFAFA] hover:scale-[1.02] active:scale-[0.98] transition-all animate-on-load animate-scale-in"
+              style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}
             >
               <div className="w-10 h-10 rounded-xl bg-[#FEF3C7] flex items-center justify-center">
                 <Coins className="w-5 h-5 text-[#F59E0B]" />
@@ -202,7 +203,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Reputation Section */}
-        <section className="mb-8">
+        <section className="mb-8 animate-on-load animate-fade-in stagger-1">
           <h2 className="text-sm font-medium text-[#8A8580] uppercase tracking-wider mb-3">
             Reputation
           </h2>
@@ -234,7 +235,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Settings */}
-        <section className="mb-8">
+        <section className="mb-8 animate-on-load animate-fade-in stagger-2">
           <h2 className="text-sm font-medium text-[#8A8580] uppercase tracking-wider mb-3">
             Settings
           </h2>
@@ -243,7 +244,8 @@ export default function ProfilePage() {
             {/* Coaching Style */}
             <button
               onClick={() => setShowStylePicker(true)}
-              className="w-full bg-[#F5EDE4] hover:bg-[#EBE3DA] rounded-2xl p-4 transition-colors text-left"
+              className="w-full bg-[#F5EDE4] hover:bg-[#EBE3DA] hover:scale-[1.01] active:scale-[0.99] rounded-2xl p-4 transition-all text-left animate-on-load animate-slide-in-right"
+              style={{ animationDelay: '250ms', animationFillMode: 'forwards' }}
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -257,7 +259,8 @@ export default function ProfilePage() {
             {/* Connected Apps */}
             <button
               onClick={() => setShowAppsPicker(true)}
-              className="w-full bg-[#F5EDE4] hover:bg-[#EBE3DA] rounded-2xl p-4 transition-colors text-left"
+              className="w-full bg-[#F5EDE4] hover:bg-[#EBE3DA] hover:scale-[1.01] active:scale-[0.99] rounded-2xl p-4 transition-all text-left animate-on-load animate-slide-in-right"
+              style={{ animationDelay: '300ms', animationFillMode: 'forwards' }}
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -274,7 +277,10 @@ export default function ProfilePage() {
 
             {/* Health Areas Link */}
             <Link href="/health">
-              <div className="w-full bg-[#F5EDE4] hover:bg-[#EBE3DA] rounded-2xl p-4 transition-colors">
+              <div
+                className="w-full bg-[#F5EDE4] hover:bg-[#EBE3DA] hover:scale-[1.01] active:scale-[0.99] rounded-2xl p-4 transition-all animate-on-load animate-slide-in-right"
+                style={{ animationDelay: '350ms', animationFillMode: 'forwards' }}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-[#2D2A26]">Health Areas</h3>
@@ -292,7 +298,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Connected Devices (Terra) */}
-        <section className="mb-8">
+        <section className="mb-8 animate-on-load animate-fade-in stagger-3">
           <h2 className="text-sm font-medium text-[#8A8580] uppercase tracking-wider mb-3">
             Connected Devices
           </h2>
@@ -303,7 +309,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Data Sharing */}
-        <section className="mb-8">
+        <section className="mb-8 animate-on-load animate-fade-in stagger-4">
           <h2 className="text-sm font-medium text-[#8A8580] uppercase tracking-wider mb-3">
             Data Sharing
           </h2>
@@ -317,7 +323,7 @@ export default function ProfilePage() {
               </div>
               <button
                 onClick={() => handleSharingToggle('research')}
-                className={`w-12 h-7 rounded-full transition-colors relative ${
+                className={`w-12 h-7 rounded-full transition-all relative hover:scale-105 active:scale-95 ${
                   profile.sharingPreferences.research ? 'bg-[#E07A5F]' : 'bg-[#D1D5DB]'
                 }`}
               >
@@ -337,7 +343,7 @@ export default function ProfilePage() {
               </div>
               <button
                 onClick={() => handleSharingToggle('brands')}
-                className={`w-12 h-7 rounded-full transition-colors relative ${
+                className={`w-12 h-7 rounded-full transition-all relative hover:scale-105 active:scale-95 ${
                   profile.sharingPreferences.brands ? 'bg-[#E07A5F]' : 'bg-[#D1D5DB]'
                 }`}
               >
@@ -357,7 +363,7 @@ export default function ProfilePage() {
               </div>
               <button
                 onClick={() => handleSharingToggle('insurance')}
-                className={`w-12 h-7 rounded-full transition-colors relative ${
+                className={`w-12 h-7 rounded-full transition-all relative hover:scale-105 active:scale-95 ${
                   profile.sharingPreferences.insurance ? 'bg-[#E07A5F]' : 'bg-[#D1D5DB]'
                 }`}
               >
@@ -376,12 +382,12 @@ export default function ProfilePage() {
         </section>
 
         {/* Danger Zone */}
-        <section className="pb-8">
+        <section className="pb-8 animate-on-load animate-fade-in stagger-5">
           <h2 className="text-sm font-medium text-[#E07A5F] uppercase tracking-wider mb-3">
             Danger Zone
           </h2>
 
-          <div className="bg-white rounded-2xl p-4">
+          <div className="bg-white rounded-2xl p-4 hover:shadow-md transition-shadow">
             <button
               onClick={() => setShowResetConfirm(true)}
               className="w-full text-left"
@@ -400,30 +406,31 @@ export default function ProfilePage() {
 
       {/* Coaching Style Picker Modal */}
       {showStylePicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50" onClick={() => setShowStylePicker(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 animate-fade-in" onClick={() => setShowStylePicker(false)}>
           <div
-            className="bg-[#FAF6F1] rounded-t-3xl w-full max-w-[430px] p-6"
+            className="bg-[#FAF6F1] rounded-t-3xl w-full max-w-[430px] p-6 animate-slide-in-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-[#2D2A26]">Coaching Style</h3>
               <button
                 onClick={() => setShowStylePicker(false)}
-                className="p-2 rounded-full hover:bg-[#F5EDE4] transition-colors"
+                className="p-2 rounded-full hover:bg-[#F5EDE4] hover:rotate-90 transition-all"
               >
                 <X className="w-5 h-5 text-[#8A8580]" />
               </button>
             </div>
 
             <div className="space-y-3">
-              {styles.map((style) => (
+              {styles.map((style, index) => (
                 <button
                   key={style.value}
                   onClick={() => {
                     setCoachingStyle(style.value);
                     setShowStylePicker(false);
                   }}
-                  className={`w-full p-4 rounded-2xl text-left transition-all ${profile.coachingStyle === style.value ? 'bg-[#FFE8DC]' : 'bg-[#F5EDE4] hover:bg-[#EBE3DA]'}`}
+                  className={`w-full p-4 rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-[0.98] animate-on-load animate-slide-in-right ${profile.coachingStyle === style.value ? 'bg-[#FFE8DC]' : 'bg-[#F5EDE4] hover:bg-[#EBE3DA]'}`}
+                  style={{ animationDelay: `${100 + index * 50}ms`, animationFillMode: 'forwards' }}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -433,7 +440,7 @@ export default function ProfilePage() {
                       <p className="text-sm text-[#8A8580]">{style.description}</p>
                     </div>
                     {profile.coachingStyle === style.value && (
-                      <div className="w-6 h-6 rounded-full bg-[#E07A5F] flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-[#E07A5F] flex items-center justify-center animate-bounce-in">
                         <Check className="w-4 h-4 text-white" />
                       </div>
                     )}
@@ -447,29 +454,30 @@ export default function ProfilePage() {
 
       {/* Apps Picker Modal */}
       {showAppsPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50" onClick={() => setShowAppsPicker(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 animate-fade-in" onClick={() => setShowAppsPicker(false)}>
           <div
-            className="bg-[#FAF6F1] rounded-t-3xl w-full max-w-[430px] p-6"
+            className="bg-[#FAF6F1] rounded-t-3xl w-full max-w-[430px] p-6 animate-slide-in-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-[#2D2A26]">Connected Apps</h3>
               <button
                 onClick={() => setShowAppsPicker(false)}
-                className="p-2 rounded-full hover:bg-[#F5EDE4] transition-colors"
+                className="p-2 rounded-full hover:bg-[#F5EDE4] hover:rotate-90 transition-all"
               >
                 <X className="w-5 h-5 text-[#8A8580]" />
               </button>
             </div>
 
             <div className="space-y-3">
-              {apps.map((app) => {
+              {apps.map((app, index) => {
                 const isConnected = profile.connectedApps.includes(app.value);
                 return (
                   <button
                     key={app.value}
                     onClick={() => toggleApp(app.value)}
-                    className={`w-full p-4 rounded-2xl text-left transition-all ${isConnected ? 'bg-[#FFE8DC]' : 'bg-[#F5EDE4] hover:bg-[#EBE3DA]'}`}
+                    className={`w-full p-4 rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-[0.98] animate-on-load animate-slide-in-right ${isConnected ? 'bg-[#FFE8DC]' : 'bg-[#F5EDE4] hover:bg-[#EBE3DA]'}`}
+                    style={{ animationDelay: `${100 + index * 50}ms`, animationFillMode: 'forwards' }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -482,7 +490,7 @@ export default function ProfilePage() {
                         <span className="font-medium text-[#2D2A26]">{app.name}</span>
                       </div>
                       {isConnected && (
-                        <div className="w-6 h-6 rounded-full bg-[#E07A5F] flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-[#E07A5F] flex items-center justify-center animate-bounce-in">
                           <Check className="w-4 h-4 text-white" />
                         </div>
                       )}
@@ -497,9 +505,9 @@ export default function ProfilePage() {
 
       {/* Points History Modal */}
       {showPointsHistory && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50" onClick={() => setShowPointsHistory(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 animate-fade-in" onClick={() => setShowPointsHistory(false)}>
           <div
-            className="bg-[#FAF6F1] rounded-t-3xl w-full max-w-[430px] p-6 max-h-[70vh] flex flex-col"
+            className="bg-[#FAF6F1] rounded-t-3xl w-full max-w-[430px] p-6 max-h-[70vh] flex flex-col animate-slide-in-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
@@ -509,14 +517,14 @@ export default function ProfilePage() {
               </div>
               <button
                 onClick={() => setShowPointsHistory(false)}
-                className="p-2 rounded-full hover:bg-[#F5EDE4] transition-colors"
+                className="p-2 rounded-full hover:bg-[#F5EDE4] hover:rotate-90 transition-all"
               >
                 <X className="w-5 h-5 text-[#8A8580]" />
               </button>
             </div>
 
             {/* Total Points */}
-            <div className="bg-[#FEF3C7] rounded-2xl p-4 mb-4 flex items-center justify-between">
+            <div className="bg-[#FEF3C7] rounded-2xl p-4 mb-4 flex items-center justify-between animate-scale-in">
               <span className="font-medium text-[#2D2A26]">Total Points</span>
               <PointsDisplay points={profile.points} size="lg" />
             </div>
@@ -524,10 +532,11 @@ export default function ProfilePage() {
             {/* History List */}
             <div className="flex-1 overflow-y-auto space-y-2">
               {profile.pointsHistory.length > 0 ? (
-                profile.pointsHistory.map((transaction) => (
+                profile.pointsHistory.map((transaction, index) => (
                   <div
                     key={transaction.id}
-                    className="bg-white rounded-xl p-3 flex items-center justify-between"
+                    className="bg-white rounded-xl p-3 flex items-center justify-between animate-on-load animate-slide-in-right"
+                    style={{ animationDelay: `${100 + index * 50}ms`, animationFillMode: 'forwards' }}
                   >
                     <div>
                       <p className="font-medium text-[#2D2A26] text-sm">{transaction.description}</p>
@@ -537,7 +546,7 @@ export default function ProfilePage() {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8">
+                <div className="text-center py-8 animate-fade-in">
                   <p className="text-[#8A8580]">No points earned yet</p>
                   <p className="text-sm text-[#8A8580] mt-1">Check in daily to start earning!</p>
                 </div>
@@ -549,9 +558,9 @@ export default function ProfilePage() {
 
       {/* Reset Confirmation Modal */}
       {showResetConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#FAF6F1] rounded-2xl w-full max-w-[350px] p-6 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#FFE8DC] flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-[#FAF6F1] rounded-2xl w-full max-w-[350px] p-6 text-center animate-scale-in">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#FFE8DC] flex items-center justify-center animate-bounce-in">
               <AlertTriangle className="w-6 h-6 text-[#E07A5F]" />
             </div>
             <h3 className="text-lg font-semibold text-[#2D2A26] mb-2">Reset All Data?</h3>
@@ -561,13 +570,13 @@ export default function ProfilePage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowResetConfirm(false)}
-                className="flex-1 px-6 py-3.5 rounded-full bg-[#F5EDE4] text-[#2D2A26] font-medium hover:bg-[#EBE3DA] transition-colors"
+                className="flex-1 px-6 py-3.5 rounded-full bg-[#F5EDE4] text-[#2D2A26] font-medium hover:bg-[#EBE3DA] active:scale-[0.98] transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReset}
-                className="flex-1 px-6 py-3.5 rounded-full bg-[#E07A5F] text-white font-medium hover:bg-[#D36B4F] transition-colors"
+                className="flex-1 px-6 py-3.5 rounded-full bg-[#E07A5F] text-white font-medium hover:bg-[#D36B4F] active:scale-[0.98] transition-all"
               >
                 Reset
               </button>
