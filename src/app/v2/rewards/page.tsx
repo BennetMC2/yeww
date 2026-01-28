@@ -7,6 +7,7 @@ import HealthIDCard from '@/components/rewards/HealthIDCard';
 import HPBalanceCard from '@/components/rewards/HPBalanceCard';
 import OpportunityCard from '@/components/rewards/OpportunityCard';
 import ProofShareModal from '@/components/rewards/ProofShareModal';
+import ProofHistory, { SharedProof } from '@/components/rewards/ProofHistory';
 import {
   UserRewards,
   HPTransaction,
@@ -147,6 +148,40 @@ const MOCK_OPPORTUNITIES: (ProofOpportunity & { isEligible: boolean; actualValue
   },
 ];
 
+// Mock shared proofs - shows history of ZK proofs shared with partners
+const MOCK_SHARED_PROOFS: SharedProof[] = [
+  {
+    id: 'proof-1',
+    proofHash: '0x7f3a9c2b1d4e5f6a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2',
+    partnerName: 'Wellness Inc',
+    claim: 'Recovery score ≥ 80',
+    threshold: '80+ recovery',
+    periodDays: 3,
+    hpEarned: 75,
+    sharedAt: new Date(Date.now() - 2 * DAY_MS).toISOString(),
+  },
+  {
+    id: 'proof-2',
+    proofHash: '0x8a4b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
+    partnerName: 'Sleep Research Co',
+    claim: 'Sleep average ≥ 7 hours',
+    threshold: '7+ hours',
+    periodDays: 3,
+    hpEarned: 100,
+    sharedAt: new Date(Date.now() - 5 * DAY_MS).toISOString(),
+  },
+  {
+    id: 'proof-3',
+    proofHash: '0x9b5c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
+    partnerName: 'FitLife Insurance',
+    claim: 'Step average ≥ 10,000',
+    threshold: '10k+ steps',
+    periodDays: 7,
+    hpEarned: 200,
+    sharedAt: new Date(Date.now() - 12 * DAY_MS).toISOString(),
+  },
+];
+
 interface DailyGoal {
   type: 'steps' | 'sleep' | 'recovery';
   label: string;
@@ -167,7 +202,8 @@ export default function RewardsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
-  const [selectedOpportunity, setSelectedOpportunity] = useState<ProofOpportunity | null>(null);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<(ProofOpportunity & { actualValue?: number }) | null>(null);
+  const [sharedProofs] = useState<SharedProof[]>(MOCK_SHARED_PROOFS);
   const [dailyGoals, setDailyGoals] = useState<DailyGoal[]>([
     { type: 'steps', label: '8k Steps', description: 'Hit 8,000+ steps today', reward: 10, icon: Footprints, met: true, claimed: false }, // Met but not claimed - prompts "Check rewards"
     { type: 'sleep', label: '7h Sleep', description: 'Get 7+ hours of sleep', reward: 10, icon: Moon, met: true, claimed: true }, // Already claimed today
@@ -423,6 +459,9 @@ export default function RewardsPage() {
         )}
       </div>
 
+      {/* Shared Proof History */}
+      <ProofHistory proofs={sharedProofs} />
+
       {/* Proof Share Modal */}
       {selectedOpportunity && (
         <ProofShareModal
@@ -430,6 +469,7 @@ export default function RewardsPage() {
           onClose={() => setSelectedOpportunity(null)}
           opportunity={selectedOpportunity}
           userId={userId}
+          actualValue={selectedOpportunity.actualValue}
           onSuccess={handleProofSuccess}
         />
       )}
