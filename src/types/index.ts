@@ -20,7 +20,7 @@ export type Priority =
   | 'be-consistent' | 'feel-better';
 
 // Past attempts options
-export type PastAttempt = 'many-times' | 'a-few-times' | 'once-or-twice' | 'not-really';
+export type PastAttempt = 'many-times' | 'a-few-times' | 'once-or-twice' | 'using-ai-already' | 'not-really';
 
 // Barriers that get in the way
 export type Barrier =
@@ -204,6 +204,7 @@ export const PAST_ATTEMPTS: PastAttemptDefinition[] = [
   { id: 'many-times', label: "Yeah, many times. Never sticks." },
   { id: 'a-few-times', label: "A few times. Some things worked for a while." },
   { id: 'once-or-twice', label: "Once or twice. Didn't really commit." },
+  { id: 'using-ai-already', label: "Tracking with AI already. Clunky, scattered, forgetful." },
   { id: 'not-really', label: "Not really. This is new for me." },
 ];
 
