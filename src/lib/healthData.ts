@@ -359,9 +359,13 @@ export async function getLatestHealthMetrics(userId: string): Promise<HealthMetr
       }
     }
 
-    return Object.keys(metrics).length > 1 ? metrics : null; // > 1 because provider is always set
-  } catch {
-    // Silently fail - the app will use mock data for the demo
+    const hasMetrics = Object.keys(metrics).length > 1; // > 1 because provider is always set
+    if (!hasMetrics) {
+      console.log(`No metrics extracted for user ${userId}. Available payloads:`, Object.keys(latestByType));
+    }
+    return hasMetrics ? metrics : null;
+  } catch (error) {
+    console.error(`Error fetching health metrics for ${userId}:`, error);
     return null;
   }
 }

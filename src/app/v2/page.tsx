@@ -230,12 +230,14 @@ export default function TodayPage() {
   const displayMetrics = homeDataCache?.metrics ?? MOCK_METRICS;
 
   // Track if using mock data
-  const usingMockMetrics = !homeDataCache?.metrics;
-  const usingMockInsights = proactiveInsights.length === 0;
+  // If we have real proactive insights, we have a connected wearable even if metrics fetch failed
+  const hasRealInsights = proactiveInsights.length > 0;
+  const usingMockMetrics = !homeDataCache?.metrics && !hasRealInsights;
+  const usingMockInsights = !hasRealInsights;
 
   // Use mock insight for demo if no real insights
   // Limit to 2 most recent insights to avoid overwhelming the user
-  const displayInsights = proactiveInsights.length > 0
+  const displayInsights = hasRealInsights
     ? proactiveInsights.slice(0, 2)
     : [MOCK_INSIGHT];
 
