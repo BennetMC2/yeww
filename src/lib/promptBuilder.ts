@@ -28,6 +28,20 @@ import {
   buildPatternGuidelines,
   buildActivePatterns,
   buildFormattingSection,
+  buildVO2MaxKnowledgeSection,
+  buildVO2MaxInsights,
+  buildSleepKnowledgeSection,
+  buildSleepInsights,
+  buildHRVKnowledgeSection,
+  buildHRVInsights,
+  buildRecoveryInsights,
+  buildExerciseKnowledgeSection,
+  buildExerciseInsights,
+  buildStressKnowledgeSection,
+  buildLongevityKnowledgeSection,
+  buildCircadianKnowledgeSection,
+  buildNutritionKnowledgeSection,
+  buildSupplementsKnowledgeSection,
 } from './promptSections';
 
 /**
@@ -98,9 +112,25 @@ export function buildSystemPrompt(context: PromptContext): string {
     // User-specific context
     buildUserContextSection(context),
 
-    // Health domain knowledge
+    // Health domain knowledge (general + specialized)
     buildHealthKnowledgeSection(),
+    buildVO2MaxKnowledgeSection(),
+    buildSleepKnowledgeSection(),
+    buildHRVKnowledgeSection(),
+    buildExerciseKnowledgeSection(),
+    buildStressKnowledgeSection(),
+    buildLongevityKnowledgeSection(),
+    buildCircadianKnowledgeSection(),
+    buildNutritionKnowledgeSection(),
+    buildSupplementsKnowledgeSection(),
+
+    // Current metrics and insights
     buildCurrentMetricsSection(context.healthMetrics),
+    buildVO2MaxInsights(context.healthMetrics),
+    buildSleepInsights(context.healthMetrics),
+    buildHRVInsights(context.healthMetrics),
+    buildRecoveryInsights(context.healthMetrics),
+    buildExerciseInsights(context.healthMetrics),
 
     // Conversation design
     buildConversationSection(),
