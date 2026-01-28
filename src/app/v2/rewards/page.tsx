@@ -202,6 +202,7 @@ export default function RewardsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
+  const [showAllOpportunities, setShowAllOpportunities] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<(ProofOpportunity & { actualValue?: number }) | null>(null);
   const [sharedProofs] = useState<SharedProof[]>(MOCK_SHARED_PROOFS);
   const [dailyGoals, setDailyGoals] = useState<DailyGoal[]>([
@@ -438,18 +439,38 @@ export default function RewardsPage() {
         </div>
       </div>
 
+      {/* Shared Proof History - moved up for visibility */}
+      <ProofHistory proofs={sharedProofs} />
+
       {/* Sharing Opportunities */}
       <div>
-        <h3 className="font-semibold text-[#2D2A26] mb-3">Earn by Sharing</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-[#2D2A26]">Earn by Sharing</h3>
+          {opportunities.length > 3 && (
+            <span className="text-xs text-[#8A8580]">{opportunities.length} available</span>
+          )}
+        </div>
         {opportunities.length > 0 ? (
           <div className="space-y-3">
-            {opportunities.map((opp) => (
+            {opportunities.slice(0, showAllOpportunities ? undefined : 3).map((opp) => (
               <OpportunityCard
                 key={opp.id}
                 opportunity={opp}
                 onShare={() => setSelectedOpportunity(opp)}
               />
             ))}
+            {opportunities.length > 3 && (
+              <button
+                onClick={() => setShowAllOpportunities(!showAllOpportunities)}
+                className="w-full py-2.5 text-sm text-[#8A8580] hover:text-[#6B6560] flex items-center justify-center gap-1 bg-gray-50 rounded-lg"
+              >
+                {showAllOpportunities ? (
+                  <>Show less <ChevronUp className="w-4 h-4" /></>
+                ) : (
+                  <>Show {opportunities.length - 3} more <ChevronDown className="w-4 h-4" /></>
+                )}
+              </button>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-xl p-6 text-center">
@@ -458,9 +479,6 @@ export default function RewardsPage() {
           </div>
         )}
       </div>
-
-      {/* Shared Proof History */}
-      <ProofHistory proofs={sharedProofs} />
 
       {/* Proof Share Modal */}
       {selectedOpportunity && (
