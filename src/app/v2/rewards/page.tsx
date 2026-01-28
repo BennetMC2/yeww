@@ -353,38 +353,46 @@ export default function RewardsPage() {
 
       {/* Mock Data Indicator */}
       {(usingMockRewards || usingMockTransactions) && (
-        <div className="text-xs text-amber-600 text-center py-1">
+        <div className="text-xs text-amber-600 text-center py-1 animate-fade-in">
           Using demo data — connect your wearable for real metrics
         </div>
       )}
 
       {/* HealthID Card */}
-      <HealthIDCard
-        name={profile?.name || 'Demo User'}
-        healthScore={healthScore}
-        reputationScore={rewards.reputationScore}
-        reputationTier={rewards.reputationTier as ReputationTier}
-        memberSince={profile?.createdAt || new Date().toISOString()}
-      />
+      <div className="animate-fade-in">
+        <HealthIDCard
+          name={profile?.name || 'Demo User'}
+          healthScore={healthScore}
+          reputationScore={rewards.reputationScore}
+          reputationTier={rewards.reputationTier as ReputationTier}
+          memberSince={profile?.createdAt || new Date().toISOString()}
+        />
+      </div>
 
       {/* HP Balance */}
-      <HPBalanceCard
-        balance={rewards.hpBalance}
-        lifetimeEarned={rewards.lifetimeEarned}
-        recentTransactions={transactions.slice(0, 3)}
-        onViewHistory={() => setShowAllTransactions(!showAllTransactions)}
-      />
+      <div className="animate-fade-in stagger-1">
+        <HPBalanceCard
+          balance={rewards.hpBalance}
+          lifetimeEarned={rewards.lifetimeEarned}
+          recentTransactions={transactions.slice(0, 3)}
+          onViewHistory={() => setShowAllTransactions(!showAllTransactions)}
+        />
+      </div>
 
       {/* Transaction History (expandable) */}
       {showAllTransactions && (
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-xl p-4 shadow-sm animate-scale-in">
           <div className="flex items-center gap-2 mb-3">
             <History className="w-4 h-4 text-[#8A8580]" />
             <h3 className="font-medium text-[#2D2A26]">Transaction History</h3>
           </div>
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {transactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+            {transactions.map((tx, index) => (
+              <div
+                key={tx.id}
+                className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
                 <div>
                   <p className="text-sm text-[#2D2A26]">{tx.description}</p>
                   <p className="text-xs text-[#8A8580]">
@@ -401,7 +409,7 @@ export default function RewardsPage() {
       )}
 
       {/* Daily Goals */}
-      <div>
+      <div className="animate-fade-in stagger-2">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-[#2D2A26]">Daily Goals</h3>
           <button
@@ -413,18 +421,19 @@ export default function RewardsPage() {
           </button>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          {dailyGoals.map((goal) => {
+          {dailyGoals.map((goal, index) => {
             const Icon = goal.icon;
             return (
               <div
                 key={goal.type}
-                className={`p-3 rounded-xl text-center transition-all ${
+                className={`p-3 rounded-xl text-center transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] animate-scale-in ${
                   goal.claimed
                     ? 'bg-green-50 border border-green-200'
                     : goal.met
                     ? 'bg-[#E07A5F]/10 border border-[#E07A5F]/30'
                     : 'bg-gray-50 border border-gray-100'
                 }`}
+                style={{ animationDelay: `${300 + index * 100}ms` }}
               >
                 <Icon className={`w-5 h-5 mx-auto mb-1 ${
                   goal.claimed ? 'text-green-500' : goal.met ? 'text-[#E07A5F]' : 'text-gray-400'
@@ -440,10 +449,12 @@ export default function RewardsPage() {
       </div>
 
       {/* Shared Proof History - moved up for visibility */}
-      <ProofHistory proofs={sharedProofs} />
+      <div className="animate-fade-in stagger-3">
+        <ProofHistory proofs={sharedProofs} />
+      </div>
 
       {/* Sharing Opportunities */}
-      <div>
+      <div className="animate-fade-in stagger-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-[#2D2A26]">Earn by Sharing</h3>
           {opportunities.length > 3 && (
@@ -452,17 +463,22 @@ export default function RewardsPage() {
         </div>
         {opportunities.length > 0 ? (
           <div className="space-y-3">
-            {opportunities.slice(0, showAllOpportunities ? undefined : 3).map((opp) => (
-              <OpportunityCard
+            {opportunities.slice(0, showAllOpportunities ? undefined : 3).map((opp, index) => (
+              <div
                 key={opp.id}
-                opportunity={opp}
-                onShare={() => setSelectedOpportunity(opp)}
-              />
+                className="animate-slide-in-right"
+                style={{ animationDelay: `${500 + index * 100}ms` }}
+              >
+                <OpportunityCard
+                  opportunity={opp}
+                  onShare={() => setSelectedOpportunity(opp)}
+                />
+              </div>
             ))}
             {opportunities.length > 3 && (
               <button
                 onClick={() => setShowAllOpportunities(!showAllOpportunities)}
-                className="w-full py-2.5 text-sm text-[#8A8580] hover:text-[#6B6560] flex items-center justify-center gap-1 bg-gray-50 rounded-lg"
+                className="w-full py-2.5 text-sm text-[#8A8580] hover:text-[#6B6560] flex items-center justify-center gap-1 bg-gray-50 rounded-lg transition-all hover:bg-gray-100"
               >
                 {showAllOpportunities ? (
                   <>Show less <ChevronUp className="w-4 h-4" /></>
@@ -473,7 +489,7 @@ export default function RewardsPage() {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-xl p-6 text-center">
+          <div className="bg-white rounded-xl p-6 text-center animate-fade-in">
             <p className="text-[#8A8580]">No opportunities available yet.</p>
             <p className="text-xs text-[#B5AFA8] mt-1">Check back soon for new ways to earn!</p>
           </div>
