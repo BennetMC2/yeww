@@ -40,37 +40,84 @@ function setLocalUserId(id: string): void {
 
 // ============ Type Mapping Helpers ============
 
+// Database user row structure (from Supabase)
+interface DbUser {
+  id: string;
+  name: string | null;
+  created_at: string;
+  coaching_style: string | null;
+  connected_apps: ConnectedApp[] | null;
+  health_areas: HealthArea[] | null;
+  onboarding_completed: boolean | null;
+  last_check_in: string | null;
+  check_in_streak: number | null;
+  data_sources: DataSource[] | null;
+  priorities: Priority[] | null;
+  past_attempt: PastAttempt | null;
+  barriers: Barrier[] | null;
+  health_score: number | null;
+  reputation_level: string | null;
+  reputation_points: number | null;
+  points: number | null;
+  sharing_research: boolean | null;
+  sharing_brands: boolean | null;
+  sharing_insurance: boolean | null;
+}
+
+// Database user row for upsert (excludes auto-generated fields)
+interface DbUserUpsert {
+  id: string;
+  name: string | null;
+  coaching_style: string;
+  connected_apps: ConnectedApp[];
+  health_areas: HealthArea[];
+  onboarding_completed: boolean;
+  last_check_in: string | null;
+  check_in_streak: number;
+  data_sources: DataSource[];
+  priorities: Priority[];
+  past_attempt: PastAttempt | null;
+  barriers: Barrier[];
+  health_score: number;
+  reputation_level: string;
+  reputation_points: number;
+  points: number;
+  sharing_research: boolean;
+  sharing_brands: boolean;
+  sharing_insurance: boolean;
+}
+
 // Convert database user to frontend UserProfile
-function dbUserToProfile(dbUser: Record<string, unknown>, pointsHistory: PointsTransaction[] = []): UserProfile {
+function dbUserToProfile(dbUser: DbUser, pointsHistory: PointsTransaction[] = []): UserProfile {
   return {
-    id: dbUser.id as string,
-    name: (dbUser.name as string) || '',
-    createdAt: dbUser.created_at as string,
+    id: dbUser.id,
+    name: dbUser.name || '',
+    createdAt: dbUser.created_at,
     coachingStyle: (dbUser.coaching_style as CoachingStyle) || 'balanced',
-    connectedApps: (dbUser.connected_apps as ConnectedApp[]) || [],
-    healthAreas: (dbUser.health_areas as HealthArea[]) || [],
-    onboardingCompleted: (dbUser.onboarding_completed as boolean) || false,
-    lastCheckIn: dbUser.last_check_in as string | null,
-    checkInStreak: (dbUser.check_in_streak as number) || 0,
-    dataSources: (dbUser.data_sources as DataSource[]) || [],
-    priorities: (dbUser.priorities as Priority[]) || [],
-    pastAttempt: dbUser.past_attempt as PastAttempt | null,
-    barriers: (dbUser.barriers as Barrier[]) || [],
-    healthScore: (dbUser.health_score as number) || 0,
+    connectedApps: dbUser.connected_apps || [],
+    healthAreas: dbUser.health_areas || [],
+    onboardingCompleted: dbUser.onboarding_completed || false,
+    lastCheckIn: dbUser.last_check_in,
+    checkInStreak: dbUser.check_in_streak || 0,
+    dataSources: dbUser.data_sources || [],
+    priorities: dbUser.priorities || [],
+    pastAttempt: dbUser.past_attempt,
+    barriers: dbUser.barriers || [],
+    healthScore: dbUser.health_score || 0,
     reputationLevel: (dbUser.reputation_level as UserProfile['reputationLevel']) || 'starter',
-    reputationPoints: (dbUser.reputation_points as number) || 0,
-    points: (dbUser.points as number) || 0,
+    reputationPoints: dbUser.reputation_points || 0,
+    points: dbUser.points || 0,
     pointsHistory,
     sharingPreferences: {
-      research: (dbUser.sharing_research as boolean) || false,
-      brands: (dbUser.sharing_brands as boolean) || false,
-      insurance: (dbUser.sharing_insurance as boolean) || false,
+      research: dbUser.sharing_research || false,
+      brands: dbUser.sharing_brands || false,
+      insurance: dbUser.sharing_insurance || false,
     },
   };
 }
 
 // Convert frontend UserProfile to database format
-function profileToDbUser(profile: UserProfile): Record<string, unknown> {
+function profileToDbUser(profile: UserProfile): DbUserUpsert {
   return {
     id: profile.id,
     name: profile.name || null,

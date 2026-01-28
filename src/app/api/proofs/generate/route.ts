@@ -4,6 +4,14 @@ import { generateMockProof } from '@/lib/proofGenerator';
 import { awardHP, updateReputationScore } from '@/lib/rewardsEngine';
 import { RequirementType } from '@/types';
 
+// UUID v4 pattern for validation
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Validate userId format (UUID or demo-user for testing)
+function isValidUserId(userId: string): boolean {
+  return UUID_PATTERN.test(userId) || userId === 'demo-user';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -12,6 +20,20 @@ export async function POST(request: NextRequest) {
     if (!userId || !opportunityId) {
       return NextResponse.json(
         { error: 'userId and opportunityId are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidUserId(userId)) {
+      return NextResponse.json(
+        { error: 'Invalid userId format' },
+        { status: 400 }
+      );
+    }
+
+    if (!UUID_PATTERN.test(opportunityId)) {
+      return NextResponse.json(
+        { error: 'Invalid opportunityId format' },
         { status: 400 }
       );
     }

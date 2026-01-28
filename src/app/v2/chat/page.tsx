@@ -3,12 +3,30 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowUp } from 'lucide-react';
-import { HealthMetrics } from '@/types';
+import { HealthMetrics, UserProfile } from '@/types';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+}
+
+// Local profile for chat - subset of UserProfile stored in localStorage
+interface LocalProfile {
+  id: string;
+  name: string;
+  coachingStyle: string;
+  healthAreas: { id: string; name: string; active: boolean; addedAt: string }[];
+  createdAt: string;
+  healthScore: number;
+  reputationLevel: string;
+  points: number;
+  priorities: string[];
+  pastAttempt: string | null;
+  barriers: string[];
+  dataSources: string[];
+  checkInStreak: number;
+  lastCheckIn: string | null;
 }
 
 // Mock metrics for when real data isn't available
@@ -45,16 +63,16 @@ const MOCK_METRICS: HealthMetrics = {
 };
 
 // Read profile directly from localStorage - matches storage.ts keys
-function getStoredProfile() {
+function getStoredProfile(): LocalProfile | null {
   if (typeof window === 'undefined') return null;
   try {
     // Try fallback profile first (always persisted)
     const fallback = localStorage.getItem('yeww_profile_fallback');
-    if (fallback) return JSON.parse(fallback);
+    if (fallback) return JSON.parse(fallback) as LocalProfile;
 
     // Try new profile key
     const newProfile = localStorage.getItem('longevity_user_profile');
-    if (newProfile) return JSON.parse(newProfile);
+    if (newProfile) return JSON.parse(newProfile) as LocalProfile;
   } catch (e) {
     console.error('Failed to read profile from localStorage:', e);
   }
@@ -69,7 +87,7 @@ function ChatContent() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
+  const [profile, setProfile] = useState<LocalProfile | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialSent = useRef(false);
 
@@ -117,7 +135,7 @@ function ChatContent() {
             id: profile?.id || 'user',
             name: profile?.name || 'User',
             coachingStyle: profile?.coachingStyle || 'balanced',
-            healthAreas: (profile?.healthAreas && (profile.healthAreas as unknown[]).length > 0)
+            healthAreas: profile?.healthAreas?.length
               ? profile.healthAreas
               : [
                   { id: 'sleep', name: 'Sleep', active: true, addedAt: new Date().toISOString() },
@@ -127,14 +145,14 @@ function ChatContent() {
             healthScore: profile?.healthScore || 72,
             reputationLevel: profile?.reputationLevel || 'trusted',
             points: profile?.points || 450,
-            priorities: (profile?.priorities && (profile.priorities as unknown[]).length > 0)
+            priorities: profile?.priorities?.length
               ? profile.priorities
               : ['energy', 'sleep', 'fitness'],
             pastAttempt: profile?.pastAttempt || 'tracking-apps',
-            barriers: (profile?.barriers && (profile.barriers as unknown[]).length > 0)
+            barriers: profile?.barriers?.length
               ? profile.barriers
               : ['consistency', 'time'],
-            dataSources: (profile?.dataSources && (profile.dataSources as unknown[]).length > 0)
+            dataSources: profile?.dataSources?.length
               ? profile.dataSources
               : ['wearable'],
             checkInStreak: profile?.checkInStreak || 5,

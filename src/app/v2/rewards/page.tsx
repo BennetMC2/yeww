@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Footprints, Moon, Battery, ChevronDown, ChevronUp, History } from 'lucide-react';
+import { Footprints, Moon, Battery, ChevronDown, ChevronUp, History, AlertCircle, RefreshCw } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import HealthIDCard from '@/components/rewards/HealthIDCard';
 import HPBalanceCard from '@/components/rewards/HPBalanceCard';
@@ -68,6 +68,7 @@ export default function RewardsPage() {
   const [transactions, setTransactions] = useState<HPTransaction[]>(MOCK_TRANSACTIONS);
   const [opportunities, setOpportunities] = useState<(ProofOpportunity & { isEligible: boolean; actualValue?: number; alreadyClaimed: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<ProofOpportunity | null>(null);
   const [dailyGoals, setDailyGoals] = useState<DailyGoal[]>([
@@ -82,16 +83,28 @@ export default function RewardsPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      // Fetch all data in parallel
+      const [balanceRes, txRes, oppRes, metricsRes] = await Promise.all([
+        fetch(`/api/rewards/balance?userId=${userId}`),
+        fetch(`/api/rewards/transactions?userId=${userId}&limit=10`),
+        fetch(`/api/proofs/opportunities?userId=${userId}`),
+        fetch(`/api/health/metrics?userId=${userId}`),
+      ]);
+
+      // Track if any critical fetch failed
+      let hasErrors = false;
 
       // Fetch balance
-      const balanceRes = await fetch(`/api/rewards/balance?userId=${userId}`);
       if (balanceRes.ok) {
         const balanceData = await balanceRes.json();
         setRewards(balanceData);
+      } else {
+        hasErrors = true;
       }
 
       // Fetch transactions
-      const txRes = await fetch(`/api/rewards/transactions?userId=${userId}&limit=10`);
       if (txRes.ok) {
         const txData = await txRes.json();
         if (txData.transactions?.length > 0) {
@@ -100,7 +113,6 @@ export default function RewardsPage() {
       }
 
       // Fetch opportunities
-      const oppRes = await fetch(`/api/proofs/opportunities?userId=${userId}`);
       if (oppRes.ok) {
         const oppData = await oppRes.json();
         if (oppData.opportunities) {
@@ -109,7 +121,6 @@ export default function RewardsPage() {
       }
 
       // Fetch health metrics to determine daily goal status
-      const metricsRes = await fetch(`/api/health/metrics?userId=${userId}`);
       if (metricsRes.ok) {
         const metricsData = await metricsRes.json();
         if (metricsData.metrics) {
@@ -127,8 +138,13 @@ export default function RewardsPage() {
           }));
         }
       }
-    } catch (error) {
-      console.error('Error fetching rewards data:', error);
+
+      if (hasErrors) {
+        setError('Some data could not be loaded. Showing cached values.');
+      }
+    } catch (err) {
+      console.error('Error fetching rewards data:', err);
+      setError('Failed to load rewards data. Tap to retry.');
     } finally {
       setLoading(false);
     }
@@ -172,6 +188,10 @@ export default function RewardsPage() {
     fetchData();
   };
 
+  // Check if using mock data
+  const usingMockRewards = rewards.userId === 'demo';
+  const usingMockTransactions = transactions.length > 0 && transactions[0].userId === 'demo';
+
   if (loading) {
     return (
       <div className="px-6 py-8 flex items-center justify-center">
@@ -182,6 +202,27 @@ export default function RewardsPage() {
 
   return (
     <div className="px-6 pb-8 space-y-6">
+      {/* Error Banner */}
+      {error && (
+        <button
+          onClick={fetchData}
+          className="w-full flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700"
+        >
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      )}
+
+      {/* Mock Data Indicator */}
+      {(usingMockRewards || usingMockTransactions) && (
+        <div className="text-xs text-amber-600 text-center py-1">
+          Using demo data — connect your wearable for real metrics
+        </div>
+      )}
+
       {/* HealthID Card */}
       <HealthIDCard
         name={profile?.name || 'Demo User'}

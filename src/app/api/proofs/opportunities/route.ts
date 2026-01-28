@@ -4,6 +4,14 @@ import { checkEligibility } from '@/lib/proofGenerator';
 import { seedOpportunities } from '@/lib/seedOpportunities';
 import { ProofOpportunity, RequirementType } from '@/types';
 
+// UUID v4 pattern for validation
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Validate userId format (UUID or demo-user for testing)
+function isValidUserId(userId: string): boolean {
+  return UUID_PATTERN.test(userId) || userId === 'demo-user';
+}
+
 interface OpportunityWithEligibility extends ProofOpportunity {
   isEligible: boolean;
   actualValue?: number;
@@ -17,6 +25,13 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.json(
         { error: 'userId is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidUserId(userId)) {
+      return NextResponse.json(
+        { error: 'Invalid userId format' },
         { status: 400 }
       );
     }

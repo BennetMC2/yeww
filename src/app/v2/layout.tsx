@@ -40,8 +40,11 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
   // Use mock profile if not onboarded
   const displayProfile = profile?.onboardingCompleted ? profile : MOCK_PROFILE;
 
-  // Fetch HP balance
+  // Fetch HP balance with retry logic
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 3;
+
     async function fetchBalance() {
       const userId = profile?.id || 'demo-user';
       try {
@@ -49,9 +52,20 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
         if (res.ok) {
           const data = await res.json();
           setHpBalance(data.hpBalance);
+        } else if (res.status >= 500 && retryCount < maxRetries) {
+          // Server error - retry with backoff
+          retryCount++;
+          const delay = 1000 * Math.pow(2, retryCount - 1);
+          setTimeout(fetchBalance, delay);
         }
       } catch (error) {
         console.error('Error fetching HP balance:', error);
+        // Retry on network errors
+        if (retryCount < maxRetries) {
+          retryCount++;
+          const delay = 1000 * Math.pow(2, retryCount - 1);
+          setTimeout(fetchBalance, delay);
+        }
       }
     }
     fetchBalance();

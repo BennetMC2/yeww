@@ -6,9 +6,17 @@ import { supabase } from '@/lib/supabase';
  * Usage: GET /api/debug/terra-data?userId=xxx
  * Or:    GET /api/debug/terra-data?listUsers=true
  *
- * TODO: Remove or protect this endpoint in production
+ * PROTECTED: Only available in development mode
  */
 export async function GET(request: NextRequest) {
+  // Block access in production
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Debug endpoint not available in production' },
+      { status: 403 }
+    );
+  }
+
   const listUsers = request.nextUrl.searchParams.get('listUsers');
   const userId = request.nextUrl.searchParams.get('userId');
 

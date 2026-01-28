@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   UserProfile,
   ConversationHistory,
@@ -62,6 +62,41 @@ interface HomeDataCache {
 
 // Cache duration: 2 minutes
 const HOME_CACHE_DURATION_MS = 2 * 60 * 1000;
+
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY_MS = 1000;
+
+// Helper function for fetch with retry and exponential backoff
+async function fetchWithRetry(
+  url: string,
+  options?: RequestInit,
+  maxRetries: number = MAX_RETRIES
+): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok || response.status < 500) {
+        // Return on success or client errors (don't retry 4xx)
+        return response;
+      }
+      // Server error - will retry
+      lastError = new Error(`Server error: ${response.status}`);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+
+    // Wait before retry with exponential backoff
+    if (attempt < maxRetries - 1) {
+      const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError || new Error('Fetch failed after retries');
+}
 
 interface AppContextType {
   // User Profile
@@ -292,9 +327,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await saveUserProfile(updated);
   }, [profile]);
 
-  // Fetch home page data with caching
+  // Track in-flight fetch to prevent duplicate requests
+  const fetchInProgressRef = useRef(false);
+
+  // Fetch home page data with caching and retry logic
   const fetchHomeData = useCallback(async (forceRefresh = false): Promise<HomeDataCache | null> => {
     if (!profile?.id) return null;
+
+    // Prevent duplicate in-flight requests
+    if (fetchInProgressRef.current) {
+      return homeDataCache;
+    }
 
     // Return cached data if still fresh (unless forcing refresh)
     if (!forceRefresh && homeDataCache) {
@@ -304,15 +347,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    fetchInProgressRef.current = true;
     setIsLoadingHomeData(true);
 
     try {
-      // Fetch all home data in parallel
+      // Fetch all home data in parallel with retry logic
       const refreshParam = forceRefresh ? '&refresh=true' : '';
       const [metricsRes, insightRes, historyRes] = await Promise.all([
-        fetch(`/api/health/metrics?userId=${encodeURIComponent(profile.id)}${refreshParam}`),
-        fetch(`/api/insights/daily?userId=${encodeURIComponent(profile.id)}`),
-        fetch(`/api/health/score-history?userId=${encodeURIComponent(profile.id)}`),
+        fetchWithRetry(`/api/health/metrics?userId=${encodeURIComponent(profile.id)}${refreshParam}`),
+        fetchWithRetry(`/api/insights/daily?userId=${encodeURIComponent(profile.id)}`),
+        fetchWithRetry(`/api/health/score-history?userId=${encodeURIComponent(profile.id)}`),
       ]);
 
       let metrics: HealthMetrics | null = null;
@@ -352,6 +396,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error('Error fetching home data:', error);
       return homeDataCache; // Return stale cache on error
     } finally {
+      fetchInProgressRef.current = false;
       setIsLoadingHomeData(false);
     }
   }, [profile?.id, homeDataCache, recalculateScores]);
@@ -387,18 +432,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Proactive insights management
+  // Track in-flight insights fetch
+  const insightsFetchInProgressRef = useRef(false);
+
+  // Proactive insights management with retry logic
   const fetchProactiveInsights = useCallback(async () => {
     if (!profile?.id) return;
 
+    // Prevent duplicate in-flight requests
+    if (insightsFetchInProgressRef.current) {
+      return;
+    }
+
+    insightsFetchInProgressRef.current = true;
+
     try {
-      const response = await fetch(`/api/proactive-insights?userId=${encodeURIComponent(profile.id)}`);
+      const response = await fetchWithRetry(`/api/proactive-insights?userId=${encodeURIComponent(profile.id)}`);
       if (response.ok) {
         const data = await response.json();
         setProactiveInsights(data.insights || []);
       }
     } catch (error) {
       console.error('Error fetching proactive insights:', error);
+    } finally {
+      insightsFetchInProgressRef.current = false;
     }
   }, [profile?.id]);
 

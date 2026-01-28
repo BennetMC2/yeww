@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, Camera, FlaskConical, Zap, ChevronRight } from 'lucide-react';
+import { Scale, Camera, FlaskConical, Zap, ChevronRight, AlertCircle } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import MorningBrief from '@/components/v2/MorningBrief';
 import ExpandableStats from '@/components/v2/ExpandableStats';
@@ -12,6 +12,19 @@ import ScreenshotImportModal from '@/components/data/ScreenshotImportModal';
 import PatternCard from '@/components/insights/PatternCard';
 import Link from 'next/link';
 import { ProactiveInsight, HealthMetrics, DetectedPattern, ProofOpportunity } from '@/types';
+
+// Pattern response from API
+interface PatternResponse {
+  id: string;
+  description: string;
+  confidence: number;
+  lastObserved: string;
+  metricA: string;
+  metricB?: string;
+  correlationStrength?: number;
+  direction?: 'positive' | 'negative';
+  sampleSize?: number;
+}
 
 // Mock metrics for demo
 const MOCK_METRICS: HealthMetrics = {
@@ -75,45 +88,72 @@ export default function TodayPage() {
   const [showScreenshotModal, setShowScreenshotModal] = useState(false);
   const [patterns, setPatterns] = useState<DetectedPattern[]>([]);
   const [eligibleOpportunity, setEligibleOpportunity] = useState<(ProofOpportunity & { isEligible: boolean }) | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(true);
+
+  // Track if initial fetch has been done to prevent multiple triggers
+  const hasFetchedRef = useRef(false);
+  const profileIdRef = useRef<string | null>(null);
 
   // Skip onboarding check for v2 preview
 
-  // Fetch data on mount - force refresh to get latest metrics
+  // Fetch data on mount - use refs to prevent multiple triggers from callback identity changes
   useEffect(() => {
-    if (profile?.onboardingCompleted) {
-      fetchHomeData(true); // Force refresh to bypass cache
-      fetchProactiveInsights();
-    }
-  }, [profile?.onboardingCompleted, fetchHomeData, fetchProactiveInsights]);
+    // Only fetch once when profile is ready and onboarding is completed
+    if (profile?.onboardingCompleted && !hasFetchedRef.current) {
+      // Also check if profile ID changed (e.g., user switch)
+      if (profileIdRef.current !== profile.id) {
+        profileIdRef.current = profile.id;
+        hasFetchedRef.current = true;
+        setIsLoadingInsights(true);
+        setError(null);
 
-  // Fetch patterns
-  useEffect(() => {
-    async function fetchPatterns() {
-      if (!profile?.id) return;
-      try {
-        const response = await fetch(`/api/insights/patterns?userId=${profile.id}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.patterns) {
-            setPatterns(data.patterns.map((p: Record<string, unknown>) => ({
-              id: p.id as string,
-              description: p.description as string,
-              confidence: p.confidence as number,
-              lastTriggered: p.lastObserved as string,
-              metricA: p.metricA as string,
-              metricB: p.metricB as string | undefined,
-              correlationStrength: p.correlationStrength as number | undefined,
-              direction: p.direction as 'positive' | 'negative' | undefined,
-              sampleSize: p.sampleSize as number | undefined,
-            })));
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching patterns:', err);
+        // Fetch home data and insights
+        Promise.all([
+          fetchHomeData(true), // Force refresh to bypass cache
+          fetchProactiveInsights(),
+        ])
+          .catch((err) => {
+            console.error('Error fetching initial data:', err);
+            setError('Failed to load some data. Pull down to refresh.');
+          })
+          .finally(() => {
+            setIsLoadingInsights(false);
+          });
       }
     }
-    fetchPatterns();
+  }, [profile?.onboardingCompleted, profile?.id, fetchHomeData, fetchProactiveInsights]);
+
+  // Fetch patterns - memoized to prevent unnecessary re-fetches
+  const fetchPatterns = useCallback(async () => {
+    if (!profile?.id) return;
+    try {
+      const response = await fetch(`/api/insights/patterns?userId=${profile.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.patterns) {
+          setPatterns(data.patterns.map((p: PatternResponse) => ({
+            id: p.id,
+            description: p.description,
+            confidence: p.confidence,
+            lastTriggered: p.lastObserved,
+            metricA: p.metricA,
+            metricB: p.metricB,
+            correlationStrength: p.correlationStrength,
+            direction: p.direction,
+            sampleSize: p.sampleSize,
+          })));
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching patterns:', err);
+    }
   }, [profile?.id]);
+
+  // Fetch patterns on mount
+  useEffect(() => {
+    fetchPatterns();
+  }, [fetchPatterns]);
 
   // Fetch eligible opportunities for teaser
   useEffect(() => {
@@ -210,21 +250,47 @@ export default function TodayPage() {
   // Use mock metrics if no real data
   const displayMetrics = homeDataCache?.metrics ?? MOCK_METRICS;
 
+  // Track if using mock data
+  const usingMockMetrics = !homeDataCache?.metrics;
+  const usingMockInsights = proactiveInsights.length === 0;
+
   // Use mock insight for demo if no real insights
   const displayInsights = proactiveInsights.length > 0 ? proactiveInsights : [MOCK_INSIGHT];
 
   return (
     <div className="px-6 pb-6 space-y-4">
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Mock Data Indicator */}
+      {(usingMockMetrics || usingMockInsights) && !isLoadingInsights && (
+        <div className="text-xs text-amber-600 text-center py-1">
+          Using demo data — connect your wearable for real metrics
+        </div>
+      )}
+
       {/* Proactive Insights */}
       <div>
-        {displayInsights.map((insight) => (
-          <ProactiveInsightCard
-            key={insight.id}
-            insight={insight}
-            onDismiss={dismissInsight}
-            onDiscuss={handleDiscussInsight}
-          />
-        ))}
+        {isLoadingInsights ? (
+          <div className="bg-white rounded-2xl p-4 animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+            <div className="h-4 bg-gray-200 rounded w-1/2" />
+          </div>
+        ) : (
+          displayInsights.map((insight) => (
+            <ProactiveInsightCard
+              key={insight.id}
+              insight={insight}
+              onDismiss={dismissInsight}
+              onDiscuss={handleDiscussInsight}
+            />
+          ))
+        )}
       </div>
 
       {/* Opportunity Teaser */}
