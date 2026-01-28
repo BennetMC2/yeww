@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>yeww Home - Design Concept</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #E8E4DF;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .phone-frame {
+      width: 390px;
+      min-height: 844px;
+      background: linear-gradient(180deg, #FDF9F5 0%, #FAF6F1 50%, #F5EDE4 100%);
+      border-radius: 44px;
+      overflow: hidden;
+      box-shadow:
+        0 50px 100px -20px rgba(45, 42, 38, 0.25),
+        0 30px 60px -30px rgba(45, 42, 38, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      position: relative;
+    }
+
+    /* Status bar */
+    .status-bar {
+      padding: 14px 24px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: #2D2A26;
+    }
+
+    /* Header */
+    .header {
+      padding: 8px 24px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .greeting {
+      font-size: 15px;
+      color: #8A8580;
+      font-weight: 500;
+    }
+
+    .greeting strong {
+      color: #2D2A26;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.8);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(45, 42, 38, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    .icon-btn svg {
+      width: 20px;
+      height: 20px;
+      color: #6B6560;
+    }
+
+    /* Main content */
+    .content {
+      padding: 0 20px 100px;
+    }
+
+    /* Hero Card - Health Score */
+    .hero-card {
+      background: linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%);
+      border-radius: 28px;
+      padding: 28px 24px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 4px 24px rgba(224, 122, 95, 0.12),
+        0 1px 3px rgba(45, 42, 38, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -30%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(224, 122, 95, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-card::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -20%;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(129, 178, 154, 0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8A8580;
+    }
+
+    .hero-date {
+      font-size: 12px;
+      color: #B5AFA8;
+    }
+
+    /* Health Score Visualization */
+    .score-container {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .score-ring {
+      position: relative;
+      width: 130px;
+      height: 130px;
+    }
+
+    .score-ring svg {
+      transform: rotate(-90deg);
+      filter: drop-shadow(0 4px 12px rgba(224, 122, 95, 0.3));
+    }
+
+    .score-ring-bg {
+      fill: none;
+      stroke: #F5EDE4;
+      stroke-width: 12;
+    }
+
+    .score-ring-progress {
+      fill: none;
+      stroke: url(#scoreGradient);
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 339.292;
+      stroke-dashoffset: 84.823; /* 75% filled = 339.292 * 0.25 */
+      transition: stroke-dashoffset 1s ease-out;
+    }
+
+    .score-ring-glow {
+      fill: none;
+      stroke: url(#scoreGradient);
+      stroke-width: 20;
+      stroke-linecap: round;
+      stroke-dasharray: 339.292;
+      stroke-dashoffset: 84.823;
+      opacity: 0.3;
+      filter: blur(8px);
+    }
+
+    .score-value {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .score-number {
+      font-size: 42px;
+      font-weight: 800;
+      color: #2D2A26;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+
+    .score-label {
+      font-size: 11px;
+      color: #8A8580;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .score-details {
+      flex: 1;
+    }
+
+    .score-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+      padding: 6px 12px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #4CAF50;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+    }
+
+    .status-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: #2E7D32;
+    }
+
+    .score-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .breakdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .breakdown-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .breakdown-icon.sleep {
+      background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+    }
+
+    .breakdown-icon.recovery {
+      background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+    }
+
+    .breakdown-icon.activity {
+      background: linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%);
+    }
+
+    .breakdown-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .breakdown-text {
+      font-size: 13px;
+      color: #6B6560;
+    }
+
+    .breakdown-text strong {
+      color: #2D2A26;
+      font-weight: 600;
+    }
+
+    /* Bond Card - Reputation reimagined */
+    .bond-card {
+      background: linear-gradient(135deg, #2D2A26 0%, #3D3A36 50%, #2D2A26 100%);
+      border-radius: 24px;
+      padding: 20px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 8px 32px rgba(45, 42, 38, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .bond-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(224, 122, 95, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(242, 204, 143, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .bond-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .bond-label-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bond-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(224, 122, 95, 0.4);
+    }
+
+    .bond-icon svg {
+      width: 18px;
+      height: 18px;
+      color: white;
+    }
+
+    .bond-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .bond-level {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 6px 12px;
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+    }
+
+    .level-badge {
+      font-size: 12px;
+      font-weight: 700;
+      color: #F2CC8F;
+    }
+
+    .level-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .bond-progress {
+      position: relative;
+      z-index: 1;
+      margin-bottom: 16px;
+    }
+
+    .progress-bar-bg {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 35%;
+      background: linear-gradient(90deg, #E07A5F 0%, #F2CC8F 100%);
+      border-radius: 4px;
+      box-shadow: 0 0 12px rgba(224, 122, 95, 0.5);
+      position: relative;
+    }
+
+    .progress-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+
+    .progress-current {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .progress-current strong {
+      color: #F2CC8F;
+      font-weight: 600;
+    }
+
+    .progress-next {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .bond-benefits {
+      display: flex;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .benefit-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 6px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .benefit-tag svg {
+      width: 12px;
+      height: 12px;
+      color: #81B29A;
+    }
+
+    .benefit-tag.locked {
+      opacity: 0.5;
+    }
+
+    .benefit-tag.locked svg {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Insight Card */
+    .insight-card {
+      background: linear-gradient(135deg, #FFFFFF 0%, #FFFBF8 100%);
+      border-radius: 24px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(224, 122, 95, 0.15);
+      box-shadow:
+        0 2px 16px rgba(224, 122, 95, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .insight-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .insight-avatar {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .insight-avatar svg {
+      width: 22px;
+      height: 22px;
+      color: #E07A5F;
+    }
+
+    .insight-meta {
+      flex: 1;
+    }
+
+    .insight-from {
+      font-size: 13px;
+      font-weight: 600;
+      color: #2D2A26;
+    }
+
+    .insight-time {
+      font-size: 11px;
+      color: #B5AFA8;
+    }
+
+    .insight-badge {
+      background: linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .insight-text {
+      font-size: 15px;
+      line-height: 1.5;
+      color: #2D2A26;
+      margin-bottom: 16px;
+    }
+
+    .insight-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .insight-btn {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .insight-btn.primary {
+      background: linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+    }
+
+    .insight-btn.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(224, 122, 95, 0.4);
+    }
+
+    .insight-btn.secondary {
+      background: #F5EDE4;
+      color: #6B6560;
+    }
+
+    /* Quick Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 20px;
+      padding: 16px 12px;
+      text-align: center;
+      box-shadow:
+        0 2px 12px rgba(45, 42, 38, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .stat-card.sleep::before {
+      background: linear-gradient(90deg, #5C6BC0 0%, #7986CB 100%);
+    }
+
+    .stat-card.hrv::before {
+      background: linear-gradient(90deg, #81B29A 0%, #A5D6A7 100%);
+    }
+
+    .stat-card.steps::before {
+      background: linear-gradient(90deg, #F2CC8F 0%, #FFE082 100%);
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      margin: 0 auto 8px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stat-card.sleep .stat-icon {
+      background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%);
+    }
+
+    .stat-card.hrv .stat-icon {
+      background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+    }
+
+    .stat-card.steps .stat-icon {
+      background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%);
+    }
+
+    .stat-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .stat-card.sleep .stat-icon svg { color: #5C6BC0; }
+    .stat-card.hrv .stat-icon svg { color: #81B29A; }
+    .stat-card.steps .stat-icon svg { color: #F2CC8F; }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #2D2A26;
+      line-height: 1;
+    }
+
+    .stat-unit {
+      font-size: 12px;
+      font-weight: 500;
+      color: #8A8580;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #B5AFA8;
+      margin-top: 4px;
+    }
+
+    .stat-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-top: 6px;
+      padding: 3px 6px;
+      border-radius: 6px;
+    }
+
+    .stat-trend.up {
+      background: #E8F5E9;
+      color: #4CAF50;
+    }
+
+    .stat-trend.down {
+      background: #FFEBEE;
+      color: #E57373;
+    }
+
+    .stat-trend svg {
+      width: 10px;
+      height: 10px;
+    }
+
+    /* HP Card */
+    .hp-card {
+      background: linear-gradient(135deg, #FFF9F0 0%, #FFF3E0 100%);
+      border-radius: 20px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      border: 1px solid rgba(242, 204, 143, 0.3);
+      box-shadow: 0 2px 12px rgba(242, 204, 143, 0.15);
+    }
+
+    .hp-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hp-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #F2CC8F 0%, #E9B949 100%);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(242, 204, 143, 0.4);
+    }
+
+    .hp-icon svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+    }
+
+    .hp-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hp-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #2D2A26;
+      line-height: 1;
+    }
+
+    .hp-label {
+      font-size: 12px;
+      color: #8A8580;
+      margin-top: 2px;
+    }
+
+    .hp-earn-btn {
+      background: linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .hp-earn-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(224, 122, 95, 0.4);
+    }
+
+    .hp-earn-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Chat Input */
+    .chat-input-container {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 390px;
+      padding: 16px 20px 32px;
+      background: linear-gradient(180deg, transparent 0%, #F5EDE4 20%);
+    }
+
+    .chat-input {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: white;
+      border-radius: 24px;
+      padding: 8px 8px 8px 20px;
+      box-shadow:
+        0 4px 24px rgba(45, 42, 38, 0.12),
+        0 1px 3px rgba(45, 42, 38, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .chat-input input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      color: #2D2A26;
+      background: transparent;
+    }
+
+    .chat-input input::placeholder {
+      color: #B5AFA8;
+    }
+
+    .chat-send-btn {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%);
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .chat-send-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(224, 122, 95, 0.4);
+    }
+
+    .chat-send-btn svg {
+      width: 20px;
+      height: 20px;
+      color: white;
+    }
+
+    /* Decorative elements */
+    .decoration-dot {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-frame">
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <span>
+        <svg width="17" height="10" viewBox="0 0 17 10" fill="currentColor">
+          <rect x="0" y="3" width="3" height="7" rx="1"/>
+          <rect x="5" y="2" width="3" height="8" rx="1"/>
+          <rect x="10" y="0" width="3" height="10" rx="1"/>
+          <rect x="14" y="3" width="3" height="7" rx="1" opacity="0.3"/>
+        </svg>
+      </span>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="greeting">
+        Good morning, <strong>Ben</strong>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+
+      <!-- Hero Health Score Card -->
+      <div class="hero-card">
+        <div class="hero-top">
+          <span class="hero-label">Your Health Score</span>
+          <span class="hero-date">Today, Jan 28</span>
+        </div>
+
+        <div class="score-container">
+          <div class="score-ring">
+            <svg width="130" height="130" viewBox="0 0 130 130">
+              <defs>
+                <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#E07A5F"/>
+                  <stop offset="50%" stop-color="#F2CC8F"/>
+                  <stop offset="100%" stop-color="#81B29A"/>
+                </linearGradient>
+              </defs>
+              <circle class="score-ring-glow" cx="65" cy="65" r="54"/>
+              <circle class="score-ring-bg" cx="65" cy="65" r="54"/>
+              <circle class="score-ring-progress" cx="65" cy="65" r="54"/>
+            </svg>
+            <div class="score-value">
+              <div class="score-number">75</div>
+              <div class="score-label">out of 100</div>
+            </div>
+          </div>
+
+          <div class="score-details">
+            <div class="score-status">
+              <span class="status-dot"></span>
+              <span class="status-text">Thriving</span>
+            </div>
+            <div class="score-breakdown">
+              <div class="breakdown-item">
+                <div class="breakdown-icon sleep">
+                  <svg fill="none" stroke="#5C6BC0" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                  </svg>
+                </div>
+                <span class="breakdown-text"><strong>Sleep</strong> — Excellent</span>
+              </div>
+              <div class="breakdown-item">
+                <div class="breakdown-icon recovery">
+                  <svg fill="none" stroke="#F2994A" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                </div>
+                <span class="breakdown-text"><strong>Recovery</strong> — 82%</span>
+              </div>
+              <div class="breakdown-item">
+                <div class="breakdown-icon activity">
+                  <svg fill="none" stroke="#9C27B0" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                  </svg>
+                </div>
+                <span class="breakdown-text"><strong>Activity</strong> — On track</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bond Card (Reputation reimagined) -->
+      <div class="bond-card">
+        <div class="bond-top">
+          <div class="bond-label-group">
+            <div class="bond-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+              </svg>
+            </div>
+            <span class="bond-label">Our Bond</span>
+          </div>
+          <div class="bond-level">
+            <span class="level-badge">Lv. 2</span>
+            <span class="level-name">Growing</span>
+          </div>
+        </div>
+
+        <div class="bond-progress">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill"></div>
+          </div>
+          <div class="progress-labels">
+            <span class="progress-current"><strong>350</strong> / 1,000 XP</span>
+            <span class="progress-next">Next: Trusted</span>
+          </div>
+        </div>
+
+        <div class="bond-benefits">
+          <div class="benefit-tag">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            Pattern detection
+          </div>
+          <div class="benefit-tag">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            Daily insights
+          </div>
+          <div class="benefit-tag locked">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+            Predictions
+          </div>
+        </div>
+      </div>
+
+      <!-- Proactive Insight -->
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-avatar">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+          </div>
+          <div class="insight-meta">
+            <div class="insight-from">yeww</div>
+            <div class="insight-time">Just now</div>
+          </div>
+          <div class="insight-badge">New</div>
+        </div>
+        <p class="insight-text">
+          Your sleep efficiency jumped <strong>23%</strong> last night — best in two weeks. Whatever you did yesterday evening, it worked. Keep that bedtime routine going.
+        </p>
+        <div class="insight-actions">
+          <button class="insight-btn secondary">Dismiss</button>
+          <button class="insight-btn primary">Tell me more</button>
+        </div>
+      </div>
+
+      <!-- Quick Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card sleep">
+          <div class="stat-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
+          </div>
+          <div class="stat-value">7.8<span class="stat-unit">h</span></div>
+          <div class="stat-label">Sleep</div>
+          <div class="stat-trend up">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+            </svg>
+            +0.9h
+          </div>
+        </div>
+
+        <div class="stat-card hrv">
+          <div class="stat-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+            </svg>
+          </div>
+          <div class="stat-value">58<span class="stat-unit">ms</span></div>
+          <div class="stat-label">HRV</div>
+          <div class="stat-trend up">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+            </svg>
+            +6
+          </div>
+        </div>
+
+        <div class="stat-card steps">
+          <div class="stat-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            </svg>
+          </div>
+          <div class="stat-value">8.4<span class="stat-unit">k</span></div>
+          <div class="stat-label">Steps</div>
+          <div class="stat-trend up">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+            </svg>
+            +1.2k
+          </div>
+        </div>
+      </div>
+
+      <!-- HP Card -->
+      <div class="hp-card">
+        <div class="hp-left">
+          <div class="hp-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="hp-info">
+            <div class="hp-value">2,450</div>
+            <div class="hp-label">Health Points</div>
+          </div>
+        </div>
+        <button class="hp-earn-btn">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+          </svg>
+          Earn more
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Chat Input -->
+    <div class="chat-input-container">
+      <div class="chat-input">
+        <input type="text" placeholder="Ask me anything...">
+        <button class="chat-send-btn">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

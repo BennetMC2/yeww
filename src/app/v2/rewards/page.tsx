@@ -336,12 +336,16 @@ export default function RewardsPage() {
   }
 
   return (
-    <div className="px-6 pb-8 space-y-6">
+    <div className="px-6 pb-8 space-y-5">
       {/* Error Banner */}
       {error && (
         <button
           onClick={fetchData}
-          className="w-full flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700"
+          className="w-full flex items-center justify-between gap-2 p-3.5 rounded-[16px] text-[13px] text-red-700 transition-all hover:-translate-y-0.5 active:scale-[0.98]"
+          style={{
+            background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)',
+            border: '1px solid rgba(220, 38, 38, 0.2)',
+          }}
         >
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -381,25 +385,37 @@ export default function RewardsPage() {
 
       {/* Transaction History (expandable) */}
       {showAllTransactions && (
-        <div className="bg-white rounded-xl p-4 shadow-sm animate-scale-in">
-          <div className="flex items-center gap-2 mb-3">
+        <div
+          className="rounded-[20px] p-5 animate-scale-in"
+          style={{
+            background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+            boxShadow: '0 4px 24px rgba(224, 122, 95, 0.12), 0 1px 3px rgba(45, 42, 38, 0.08)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-4">
             <History className="w-4 h-4 text-[#8A8580]" />
-            <h3 className="font-medium text-[#2D2A26]">Transaction History</h3>
+            <h3 className="font-semibold text-[#2D2A26]">Transaction History</h3>
           </div>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="space-y-2.5 max-h-64 overflow-y-auto">
             {transactions.map((tx, index) => (
               <div
                 key={tx.id}
-                className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 animate-fade-in"
+                className="flex items-center justify-between py-2.5 border-b border-[#F5EDE4] last:border-0 animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div>
-                  <p className="text-sm text-[#2D2A26]">{tx.description}</p>
-                  <p className="text-xs text-[#8A8580]">
+                  <p className="text-[13px] font-medium text-[#2D2A26]">{tx.description}</p>
+                  <p className="text-[11px] text-[#B5AFA8]">
                     {new Date(tx.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-                <span className={`font-medium ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <span
+                  className={`text-[14px] font-bold px-2.5 py-1 rounded-lg ${
+                    tx.amount > 0
+                      ? 'text-[#2E7D32] bg-[#E8F5E9]'
+                      : 'text-[#C62828] bg-[#FFEBEE]'
+                  }`}
+                >
                   {tx.amount > 0 ? '+' : ''}{tx.amount} HP
                 </span>
               </div>
@@ -411,11 +427,12 @@ export default function RewardsPage() {
       {/* Daily Goals */}
       <div className="animate-fade-in stagger-2">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-[#2D2A26]">Daily Goals</h3>
+          <h3 className="text-[13px] font-semibold text-[#8A8580]">Daily Goals</h3>
           <button
             onClick={checkDailyRewards}
             disabled={checkingDaily}
-            className="text-sm text-[#E07A5F] font-medium hover:underline disabled:opacity-50"
+            className="text-[12px] font-semibold disabled:opacity-50 transition-all hover:-translate-y-0.5"
+            style={{ color: '#E07A5F' }}
           >
             {checkingDaily ? 'Checking...' : 'Check rewards'}
           </button>
@@ -426,20 +443,36 @@ export default function RewardsPage() {
             return (
               <div
                 key={goal.type}
-                className={`p-3 rounded-xl text-center transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] animate-scale-in ${
-                  goal.claimed
-                    ? 'bg-green-50 border border-green-200'
+                className="p-3.5 rounded-[16px] text-center transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] animate-scale-in"
+                style={{
+                  animationDelay: `${300 + index * 100}ms`,
+                  background: goal.claimed
+                    ? 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)'
                     : goal.met
-                    ? 'bg-[#E07A5F]/10 border border-[#E07A5F]/30'
-                    : 'bg-gray-50 border border-gray-100'
-                }`}
-                style={{ animationDelay: `${300 + index * 100}ms` }}
+                    ? 'linear-gradient(135deg, rgba(224, 122, 95, 0.15) 0%, rgba(224, 122, 95, 0.1) 100%)'
+                    : 'linear-gradient(135deg, #F5EDE4 0%, #EBE3DA 100%)',
+                  boxShadow: goal.met && !goal.claimed
+                    ? '0 2px 8px rgba(224, 122, 95, 0.2)'
+                    : '0 2px 8px rgba(45, 42, 38, 0.04)',
+                }}
               >
-                <Icon className={`w-5 h-5 mx-auto mb-1 ${
-                  goal.claimed ? 'text-green-500' : goal.met ? 'text-[#E07A5F]' : 'text-gray-400'
-                }`} />
-                <p className="text-xs font-medium text-[#2D2A26]">{goal.label}</p>
-                <p className={`text-xs ${goal.claimed ? 'text-green-600' : 'text-[#8A8580]'}`}>
+                <div
+                  className="w-9 h-9 mx-auto mb-2 rounded-[10px] flex items-center justify-center"
+                  style={{
+                    background: goal.claimed
+                      ? 'linear-gradient(135deg, #81C784 0%, #66BB6A 100%)'
+                      : goal.met
+                      ? 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)'
+                      : 'linear-gradient(135deg, #D4CCC3 0%, #C4BCB3 100%)',
+                    boxShadow: goal.met || goal.claimed ? '0 4px 8px rgba(0, 0, 0, 0.1)' : 'none',
+                  }}
+                >
+                  <Icon className="w-4 h-4 text-white" />
+                </div>
+                <p className="text-[12px] font-semibold text-[#2D2A26]">{goal.label}</p>
+                <p className={`text-[11px] font-medium mt-0.5 ${
+                  goal.claimed ? 'text-[#2E7D32]' : goal.met ? 'text-[#E07A5F]' : 'text-[#B5AFA8]'
+                }`}>
                   {goal.claimed ? 'Claimed!' : `+${goal.reward} HP`}
                 </p>
               </div>
@@ -456,9 +489,9 @@ export default function RewardsPage() {
       {/* Sharing Opportunities */}
       <div className="animate-fade-in stagger-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-[#2D2A26]">Earn by Sharing</h3>
+          <h3 className="text-[13px] font-semibold text-[#8A8580]">Earn by Sharing</h3>
           {opportunities.length > 3 && (
-            <span className="text-xs text-[#8A8580]">{opportunities.length} available</span>
+            <span className="text-[11px] text-[#B5AFA8]">{opportunities.length} available</span>
           )}
         </div>
         {opportunities.length > 0 ? (
@@ -478,7 +511,10 @@ export default function RewardsPage() {
             {opportunities.length > 3 && (
               <button
                 onClick={() => setShowAllOpportunities(!showAllOpportunities)}
-                className="w-full py-2.5 text-sm text-[#8A8580] hover:text-[#6B6560] flex items-center justify-center gap-1 bg-gray-50 rounded-lg transition-all hover:bg-gray-100"
+                className="w-full py-3 text-[13px] font-medium text-[#8A8580] hover:text-[#6B6560] flex items-center justify-center gap-1.5 rounded-[14px] transition-all hover:-translate-y-0.5 active:scale-[0.98]"
+                style={{
+                  background: 'linear-gradient(135deg, #F5EDE4 0%, #EBE3DA 100%)',
+                }}
               >
                 {showAllOpportunities ? (
                   <>Show less <ChevronUp className="w-4 h-4" /></>
@@ -489,9 +525,15 @@ export default function RewardsPage() {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-xl p-6 text-center animate-fade-in">
-            <p className="text-[#8A8580]">No opportunities available yet.</p>
-            <p className="text-xs text-[#B5AFA8] mt-1">Check back soon for new ways to earn!</p>
+          <div
+            className="rounded-[20px] p-6 text-center animate-fade-in"
+            style={{
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+              boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06)',
+            }}
+          >
+            <p className="text-[14px] font-medium text-[#8A8580]">No opportunities available yet.</p>
+            <p className="text-[12px] text-[#B5AFA8] mt-1">Check back soon for new ways to earn!</p>
           </div>
         )}
       </div>

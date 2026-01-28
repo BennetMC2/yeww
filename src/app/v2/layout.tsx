@@ -80,44 +80,86 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF6F1]">
       {/* Header */}
-      <header className="px-6 pt-6 pb-2">
+      <header className="px-6 pt-6 pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-[#8A8580]">{today}</p>
+            <p className="text-[13px] font-medium text-[#8A8580]">{today}</p>
           </div>
-          {/* HP Balance Pill */}
-          {hpBalance !== null && (
-            <Link
-              href="/v2/rewards"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E07A5F]/10 hover:bg-[#E07A5F]/20 transition-colors"
+          <div className="flex items-center gap-3">
+            {/* HP Balance Pill */}
+            {hpBalance !== null && (
+              <Link
+                href="/v2/rewards"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all hover:-translate-y-0.5 active:scale-[0.98]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(242, 204, 143, 0.2) 0%, rgba(233, 185, 73, 0.2) 100%)',
+                  boxShadow: '0 2px 8px rgba(242, 204, 143, 0.2)',
+                }}
+              >
+                <Zap className="w-3.5 h-3.5 text-[#E9B949]" />
+                <span className="text-[12px] font-bold text-[#C9A03D]">{hpBalance.toLocaleString()}</span>
+              </Link>
+            )}
+            {/* Avatar with health score ring */}
+            <button
+              onClick={() => setShowProfile(true)}
+              className="relative group"
             >
-              <Zap className="w-3.5 h-3.5 text-[#E07A5F]" />
-              <span className="text-xs font-semibold text-[#E07A5F]">{hpBalance.toLocaleString()}</span>
-            </Link>
-          )}
-          <button
-            onClick={() => setShowProfile(true)}
-            className="relative flex items-center gap-2 group"
-          >
-            {/* Health score teaser */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/80 shadow-sm group-hover:bg-white transition-colors">
-              <span className="text-xs font-semibold text-[#2D2A26]">{displayProfile.healthScore}</span>
-              <span className="text-[10px] text-[#8A8580]">score</span>
-            </div>
-            {/* Avatar with pulse ring */}
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-[#E07A5F]/20 animate-ping" style={{ animationDuration: '2s' }} />
-              <div className="relative w-10 h-10 rounded-full bg-[#FFE8DC] flex items-center justify-center text-lg font-medium text-[#E07A5F] group-hover:bg-[#FFD9C7] transition-colors">
-                {displayProfile.name.charAt(0).toUpperCase()}
+              {/* Outer ring showing health score */}
+              <div className="relative w-12 h-12">
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
+                  {/* Background ring */}
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="21"
+                    fill="none"
+                    stroke="#F5EDE4"
+                    strokeWidth="3"
+                  />
+                  {/* Progress ring */}
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="21"
+                    fill="none"
+                    stroke="url(#headerScoreGradient)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(displayProfile.healthScore / 100) * 132} 132`}
+                    style={{ transition: 'stroke-dasharray 0.5s ease-out' }}
+                  />
+                  <defs>
+                    <linearGradient id="headerScoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#E07A5F" />
+                      <stop offset="100%" stopColor="#81B29A" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                {/* Avatar */}
+                <div
+                  className="absolute inset-1.5 rounded-full flex items-center justify-center text-[15px] font-semibold text-[#E07A5F] group-hover:scale-105 transition-transform"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)',
+                  }}
+                >
+                  {displayProfile.name.charAt(0).toUpperCase()}
+                </div>
               </div>
               {/* Streak badge */}
               {displayProfile.checkInStreak > 0 && (
-                <div className="absolute -bottom-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full bg-[#E07A5F] text-white text-[10px] font-bold shadow-sm">
+                <div
+                  className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-bold"
+                  style={{
+                    background: 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)',
+                    boxShadow: '0 2px 6px rgba(224, 122, 95, 0.4)',
+                  }}
+                >
                   {displayProfile.checkInStreak}
                 </div>
               )}
-            </div>
-          </button>
+            </button>
+          </div>
         </div>
       </header>
 

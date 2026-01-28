@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Scale, Camera, FlaskConical, Zap, ChevronRight, AlertCircle } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
-import MorningBrief from '@/components/v2/MorningBrief';
-import ExpandableStats from '@/components/v2/ExpandableStats';
-import ProactiveInsightCard from '@/components/ProactiveInsightCard';
+import HealthScoreRing from '@/components/v2/HealthScoreRing';
+import BondCard from '@/components/v2/BondCard';
+import QuickStatsGrid from '@/components/v2/QuickStatsGrid';
+import HPCard from '@/components/v2/HPCard';
+import InsightCard from '@/components/v2/InsightCard';
 import WeightEntryModal from '@/components/data/WeightEntryModal';
 import ScreenshotImportModal from '@/components/data/ScreenshotImportModal';
 import PatternCard from '@/components/insights/PatternCard';
 import Link from 'next/link';
-import { ProactiveInsight, HealthMetrics, DetectedPattern, ProofOpportunity } from '@/types';
+import { ProactiveInsight, HealthMetrics, DetectedPattern, ProofOpportunity, ReputationLevel } from '@/types';
 
 // Pattern response from API
 interface PatternResponse {
@@ -90,6 +92,8 @@ export default function TodayPage() {
   const [eligibleOpportunity, setEligibleOpportunity] = useState<(ProofOpportunity & { isEligible: boolean }) | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(true);
+  const [hpBalance, setHpBalance] = useState<number>(0);
+  const [isLoadingHP, setIsLoadingHP] = useState(true);
 
   // Track if initial fetch has been done to prevent multiple triggers
   const hasFetchedRef = useRef(false);
@@ -122,8 +126,12 @@ export default function TodayPage() {
           fetch(`/api/proofs/opportunities?userId=${userId}`)
             .then(res => res.ok ? res.json() : { opportunities: [] })
             .catch(() => ({ opportunities: [] })),
+          // Fetch HP balance
+          fetch(`/api/rewards/balance?userId=${userId}`)
+            .then(res => res.ok ? res.json() : { hpBalance: 0 })
+            .catch(() => ({ hpBalance: 0 })),
         ])
-          .then(([, , patternsData, opportunitiesData]) => {
+          .then(([, , patternsData, opportunitiesData, hpData]) => {
             // Set patterns
             if (patternsData.patterns) {
               setPatterns(patternsData.patterns.map((p: PatternResponse) => ({
@@ -146,6 +154,9 @@ export default function TodayPage() {
             if (eligible) {
               setEligibleOpportunity(eligible);
             }
+            // Set HP balance
+            setHpBalance(hpData.hpBalance ?? 0);
+            setIsLoadingHP(false);
           })
           .catch((err) => {
             console.error('Error fetching initial data:', err);
@@ -224,6 +235,8 @@ export default function TodayPage() {
     name: 'Demo User',
     healthScore: 72,
     checkInStreak: 5,
+    reputationLevel: 'regular' as ReputationLevel,
+    reputationPoints: 180,
   };
 
   // Use mock metrics if no real data
@@ -241,8 +254,32 @@ export default function TodayPage() {
     ? proactiveInsights.slice(0, 2)
     : [MOCK_INSIGHT];
 
+  // Calculate sleep quality from metrics
+  const getSleepQuality = () => {
+    const hours = displayMetrics.sleep?.lastNightHours ?? 0;
+    if (hours >= 7.5) return 'excellent';
+    if (hours >= 7) return 'good';
+    if (hours >= 6) return 'fair';
+    return 'poor';
+  };
+
+  // Calculate recovery score
+  const getRecoveryScore = () => {
+    return displayMetrics.recovery?.score ?? 75;
+  };
+
+  // Get activity status
+  const getActivityStatus = () => {
+    const steps = displayMetrics.steps?.today ?? 0;
+    const avgSteps = displayMetrics.steps?.avgDaily ?? 7000;
+    if (steps >= avgSteps * 1.2) return 'Crushing it';
+    if (steps >= avgSteps) return 'On track';
+    if (steps >= avgSteps * 0.7) return 'Behind pace';
+    return 'Getting started';
+  };
+
   return (
-    <div className="px-6 pb-6 space-y-4">
+    <div className="px-6 pb-6 space-y-5">
       {/* Error Banner */}
       {error && (
         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 animate-fade-in">
@@ -258,21 +295,64 @@ export default function TodayPage() {
         </div>
       )}
 
+      {/* Health Score Ring - Hero Section */}
+      <div
+        className="rounded-[24px] p-5 animate-on-load animate-fade-in"
+        style={{
+          background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+          boxShadow: '0 4px 24px rgba(224, 122, 95, 0.12), 0 1px 3px rgba(45, 42, 38, 0.08)',
+        }}
+      >
+        <HealthScoreRing
+          score={displayProfile.healthScore ?? 72}
+          sleepQuality={getSleepQuality()}
+          recoveryScore={getRecoveryScore()}
+          activityStatus={getActivityStatus()}
+          isLoading={isLoadingHomeData}
+        />
+      </div>
+
+      {/* Our Bond Card */}
+      <div className="animate-on-load animate-fade-in stagger-1">
+        <BondCard
+          level={displayProfile.reputationLevel ?? 'starter'}
+          points={displayProfile.reputationPoints ?? 0}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* Quick Stats Grid */}
+      <div className="animate-on-load animate-fade-in stagger-2">
+        <QuickStatsGrid
+          metrics={displayMetrics}
+          isLoading={isLoadingHomeData}
+          onMetricTap={handleMetricTap}
+        />
+      </div>
+
+      {/* HP Card */}
+      <div className="animate-on-load animate-fade-in stagger-3">
+        <HPCard
+          balance={hpBalance}
+          isLoading={isLoadingHP}
+        />
+      </div>
+
       {/* Proactive Insights */}
-      <div className="animate-fade-in">
+      <div className="animate-on-load animate-fade-in stagger-4">
         {isLoadingInsights ? (
-          <div className="bg-white rounded-2xl p-4 animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-            <div className="h-4 bg-gray-200 rounded w-1/2" />
-          </div>
+          <InsightCard
+            insight={MOCK_INSIGHT}
+            onDismiss={() => {}}
+            onDiscuss={() => {}}
+          />
         ) : (
           displayInsights.map((insight, index) => (
             <div
               key={insight.id}
-              className="animate-on-load animate-scale-in"
-              style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
+              style={{ animationDelay: `${index * 100}ms` }}
             >
-              <ProactiveInsightCard
+              <InsightCard
                 insight={insight}
                 onDismiss={dismissInsight}
                 onDiscuss={handleDiscussInsight}
@@ -286,17 +366,28 @@ export default function TodayPage() {
       {eligibleOpportunity && (
         <Link
           href="/v2/rewards"
-          className="block bg-gradient-to-r from-[#E07A5F]/10 to-[#F4A261]/10 border border-[#E07A5F]/20 rounded-xl p-4 hover:from-[#E07A5F]/15 hover:to-[#F4A261]/15 transition-colors animate-on-load animate-slide-in-right stagger-1"
+          className="block rounded-[20px] p-4 transition-all hover:-translate-y-0.5 active:scale-[0.98] animate-on-load animate-slide-in-right stagger-5"
+          style={{
+            background: 'linear-gradient(135deg, rgba(224, 122, 95, 0.1) 0%, rgba(244, 162, 97, 0.1) 100%)',
+            border: '1px solid rgba(224, 122, 95, 0.2)',
+            boxShadow: '0 2px 12px rgba(224, 122, 95, 0.1)',
+          }}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#E07A5F]/20 flex items-center justify-center animate-glow">
-                <Zap className="w-5 h-5 text-[#E07A5F]" />
+              <div
+                className="w-11 h-11 rounded-[14px] flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)',
+                  boxShadow: '0 4px 12px rgba(224, 122, 95, 0.4)',
+                }}
+              >
+                <Zap className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#2D2A26]">Ready to earn!</p>
-                <p className="text-xs text-[#8A8580]">
-                  {eligibleOpportunity.title} - {eligibleOpportunity.hpReward} HP
+                <p className="text-[14px] font-semibold text-[#2D2A26]">Ready to earn!</p>
+                <p className="text-[12px] text-[#8A8580]">
+                  {eligibleOpportunity.title} — {eligibleOpportunity.hpReward} HP
                 </p>
               </div>
             </div>
@@ -305,34 +396,16 @@ export default function TodayPage() {
         </Link>
       )}
 
-      {/* Morning Brief */}
-      <div className="animate-on-load animate-fade-in stagger-1">
-        <MorningBrief
-          name={displayProfile.name}
-          metrics={displayMetrics}
-          isLoading={false}
-        />
-      </div>
-
-      {/* Expandable Stats */}
-      <div className="animate-on-load animate-fade-in stagger-2">
-        <ExpandableStats
-          metrics={displayMetrics}
-          isLoading={false}
-          onMetricTap={handleMetricTap}
-        />
-      </div>
-
       {/* Detected Patterns */}
       {patterns.length > 0 && (
-        <div className="pt-2 animate-on-load animate-fade-in stagger-3">
-          <h3 className="text-sm font-medium text-[#8A8580] mb-2">Your Patterns</h3>
-          <div className="space-y-2">
+        <div className="animate-on-load animate-fade-in stagger-6">
+          <h3 className="text-[13px] font-semibold text-[#8A8580] mb-3">Your Patterns</h3>
+          <div className="space-y-3">
             {patterns.slice(0, 3).map((pattern, index) => (
               <div
                 key={pattern.id}
                 className="animate-on-load animate-slide-in-right"
-                style={{ animationDelay: `${400 + index * 100}ms`, animationFillMode: 'forwards' }}
+                style={{ animationDelay: `${500 + index * 100}ms`, animationFillMode: 'forwards' }}
               >
                 <PatternCard
                   pattern={{
@@ -354,48 +427,69 @@ export default function TodayPage() {
       )}
 
       {/* Data Sources */}
-      <div className="pt-2 animate-on-load animate-fade-in stagger-4">
-        <h3 className="text-sm font-medium text-[#8A8580] mb-2">Add Data</h3>
-        <div className="flex gap-2">
+      <div className="animate-on-load animate-fade-in stagger-7">
+        <h3 className="text-[13px] font-semibold text-[#8A8580] mb-3">Add Data</h3>
+        <div className="flex gap-2.5">
           <button
             onClick={() => setShowWeightModal(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-white rounded-xl text-[#2D2A26] hover:bg-[#F5EDE4] hover:scale-[1.02] active:scale-[0.98] transition-all"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-[16px] text-[#2D2A26] transition-all hover:-translate-y-0.5 active:scale-[0.98]"
+            style={{
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+              boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+            }}
           >
             <Scale className="w-4 h-4 text-[#E07A5F]" />
-            <span className="text-sm font-medium">Weight</span>
+            <span className="text-[13px] font-semibold">Weight</span>
           </button>
           <button
             onClick={() => setShowScreenshotModal(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-white rounded-xl text-[#2D2A26] hover:bg-[#F5EDE4] hover:scale-[1.02] active:scale-[0.98] transition-all"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-[16px] text-[#2D2A26] transition-all hover:-translate-y-0.5 active:scale-[0.98]"
+            style={{
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+              boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+            }}
           >
             <Camera className="w-4 h-4 text-[#E07A5F]" />
-            <span className="text-sm font-medium">Screenshot</span>
+            <span className="text-[13px] font-semibold">Screenshot</span>
           </button>
           <button
             disabled
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-white/50 rounded-xl text-[#B5AFA8] cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-[16px] text-[#B5AFA8] cursor-not-allowed opacity-50"
+            style={{
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+            }}
           >
             <FlaskConical className="w-4 h-4" />
-            <span className="text-sm font-medium">Labs</span>
+            <span className="text-[13px] font-semibold">Labs</span>
           </button>
         </div>
       </div>
 
       {/* Chat Input */}
-      <div className="pt-2 animate-on-load animate-fade-in stagger-5">
-        <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 shadow-sm">
+      <div className="animate-on-load animate-fade-in stagger-8">
+        <div
+          className="flex items-center gap-3 rounded-[20px] px-4 py-3.5"
+          style={{
+            background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+            boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+          }}
+        >
           <input
             type="text"
             placeholder="Ask me anything..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent text-[#2D2A26] placeholder-[#B5AFA8] focus:outline-none"
+            className="flex-1 bg-transparent text-[#2D2A26] text-[15px] placeholder-[#B5AFA8] focus:outline-none"
           />
           <button
             onClick={handleSend}
             disabled={!inputValue.trim()}
-            className="w-9 h-9 rounded-full bg-[#E07A5F] text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:bg-[#D36B4F] hover:scale-105 active:scale-95"
+            className="w-10 h-10 rounded-[14px] text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:-translate-y-0.5 active:scale-[0.95]"
+            style={{
+              background: 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)',
+              boxShadow: inputValue.trim() ? '0 4px 12px rgba(224, 122, 95, 0.3)' : 'none',
+            }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />

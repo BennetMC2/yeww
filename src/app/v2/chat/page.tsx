@@ -190,50 +190,110 @@ function ChatContent() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
-      <div className="px-4 py-3 flex items-center gap-3 border-b border-[#EBE3DA]">
+      {/* Header */}
+      <div
+        className="px-5 py-3.5 flex items-center gap-3"
+        style={{
+          background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+          borderBottom: '1px solid rgba(235, 227, 218, 0.6)',
+          boxShadow: '0 2px 8px rgba(45, 42, 38, 0.04)',
+        }}
+      >
         <button
           onClick={() => router.push('/v2')}
-          className="p-2 rounded-full hover:bg-[#F5EDE4] transition-colors"
+          className="w-9 h-9 rounded-[12px] flex items-center justify-center transition-all hover:bg-[#F5EDE4] active:scale-[0.95]"
         >
           <ArrowLeft className="w-5 h-5 text-[#2D2A26]" />
         </button>
-        <span className="font-medium text-[#2D2A26]">Chat</span>
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[12px] font-bold text-[#E07A5F]"
+            style={{ background: 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)' }}
+          >
+            y
+          </div>
+          <span className="font-semibold text-[#2D2A26]">yeww</span>
+        </div>
       </div>
 
+      {/* Error Banner */}
       {error && (
-        <div className="px-4 py-2 bg-red-100 text-red-700 text-sm">
+        <div
+          className="mx-4 mt-3 px-4 py-3 rounded-[14px] text-[13px] text-red-700"
+          style={{
+            background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)',
+          }}
+        >
           Error: {error}
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-5">
         {messages.length === 0 && !sending ? (
-          <div className="h-full flex items-center justify-center">
-            <p className="text-[#8A8580]">Ask me anything about your health...</p>
+          <div className="h-full flex flex-col items-center justify-center">
+            <div
+              className="w-16 h-16 rounded-[20px] flex items-center justify-center mb-4"
+              style={{
+                background: 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)',
+                boxShadow: '0 4px 12px rgba(224, 122, 95, 0.2)',
+              }}
+            >
+              <span className="text-[24px] font-bold text-[#E07A5F]">y</span>
+            </div>
+            <p className="text-[15px] text-[#8A8580]">Ask me anything about your health...</p>
           </div>
         ) : (
           <div className="space-y-4">
             {messages.map((msg) => (
-              <div key={msg.id}>
+              <div key={msg.id} className="animate-fade-in">
                 {msg.role === 'user' ? (
                   <div className="flex justify-end">
-                    <div className="max-w-[85%] bg-[#FFE8DC] rounded-2xl rounded-br-sm px-4 py-2.5">
-                      <p className="text-[#2D2A26]">{msg.content}</p>
+                    <div
+                      className="max-w-[85%] rounded-[18px] rounded-br-[6px] px-4 py-3"
+                      style={{
+                        background: 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)',
+                        boxShadow: '0 2px 8px rgba(224, 122, 95, 0.2)',
+                      }}
+                    >
+                      <p className="text-[15px] text-white leading-relaxed">{msg.content}</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="max-w-[90%]">
-                    <p className="text-[#2D2A26] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  <div className="flex gap-3">
+                    <div
+                      className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-[#E07A5F]"
+                      style={{ background: 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)' }}
+                    >
+                      y
+                    </div>
+                    <div
+                      className="max-w-[85%] rounded-[18px] rounded-tl-[6px] px-4 py-3"
+                      style={{
+                        background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+                        boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06)',
+                      }}
+                    >
+                      <p className="text-[15px] text-[#2D2A26] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    </div>
                   </div>
                 )}
               </div>
             ))}
 
             {sending && (
-              <div className="flex gap-1.5">
-                <div className="w-2 h-2 bg-[#B5AFA8] rounded-full animate-pulse" />
-                <div className="w-2 h-2 bg-[#B5AFA8] rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
-                <div className="w-2 h-2 bg-[#B5AFA8] rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
+              <div className="flex gap-3">
+                <div
+                  className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-[#E07A5F]"
+                  style={{ background: 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)' }}
+                >
+                  y
+                </div>
+                <div className="flex gap-1.5 px-4 py-3">
+                  <div className="w-2 h-2 bg-[#E07A5F] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-[#E07A5F] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-[#E07A5F] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
               </div>
             )}
 
@@ -242,8 +302,21 @@ function ChatContent() {
         )}
       </div>
 
-      <div className="px-4 py-3 border-t border-[#EBE3DA]">
-        <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-2.5 shadow-sm">
+      {/* Input */}
+      <div
+        className="px-4 py-3"
+        style={{
+          background: 'linear-gradient(135deg, #FAF6F1 0%, #F5EDE4 100%)',
+          borderTop: '1px solid rgba(235, 227, 218, 0.6)',
+        }}
+      >
+        <div
+          className="flex items-center gap-3 rounded-[18px] px-4 py-3"
+          style={{
+            background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+            boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+          }}
+        >
           <input
             type="text"
             placeholder="Message..."
@@ -256,12 +329,16 @@ function ChatContent() {
               }
             }}
             disabled={sending}
-            className="flex-1 bg-transparent text-[#2D2A26] placeholder-[#B5AFA8] focus:outline-none"
+            className="flex-1 bg-transparent text-[15px] text-[#2D2A26] placeholder-[#B5AFA8] focus:outline-none"
           />
           <button
             onClick={() => handleSend()}
             disabled={!input.trim() || sending}
-            className="w-9 h-9 rounded-full bg-[#E07A5F] text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:bg-[#D36B4F]"
+            className="w-10 h-10 rounded-[14px] text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:-translate-y-0.5 active:scale-[0.95]"
+            style={{
+              background: 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)',
+              boxShadow: input.trim() && !sending ? '0 4px 12px rgba(224, 122, 95, 0.3)' : 'none',
+            }}
           >
             <ArrowUp className="w-5 h-5" />
           </button>
