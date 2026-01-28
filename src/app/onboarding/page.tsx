@@ -34,9 +34,9 @@ const Message = ({
   size?: 'md' | 'lg' | 'xl';
 }) => {
   const sizeClasses = {
-    md: 'text-lg',
-    lg: 'text-2xl',
-    xl: 'text-3xl',
+    md: 'text-[18px]',
+    lg: 'text-[24px]',
+    xl: 'text-[32px]',
   };
 
   return (
@@ -47,7 +47,7 @@ const Message = ({
         transform: visible ? 'translateY(0)' : 'translateY(16px)',
       }}
     >
-      <p className={`${sizeClasses[size]} text-[#2D2A26] leading-relaxed`}>{children}</p>
+      <p className={`${sizeClasses[size]} font-semibold text-[#2D2A26] leading-snug`}>{children}</p>
     </div>
   );
 };
@@ -132,22 +132,34 @@ const DataSourceCard = ({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 min-h-[80px] active:scale-[0.97] ${
-        selected
-          ? 'border-[#E07A5F] bg-[#FFE8DC] shadow-md'
-          : 'border-[#F5EDE4] bg-white hover:border-[#E07A5F]/50 hover:shadow-sm'
-      }`}
+      className="flex flex-col items-center justify-center p-3.5 rounded-[16px] transition-all duration-300 min-h-[88px] hover:-translate-y-0.5 active:scale-[0.97]"
+      style={{
+        background: selected
+          ? 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)'
+          : 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+        boxShadow: selected
+          ? '0 4px 16px rgba(224, 122, 95, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
+          : '0 2px 8px rgba(45, 42, 38, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+        border: selected ? '2px solid #E07A5F' : '2px solid transparent',
+      }}
     >
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-1.5 ${
-        brandColor ? brandColor.iconBg : 'bg-[#F5EDE4]'
-      }`}>
-        <IconComponent className={`w-4 h-4 ${brandColor ? 'text-white' : selected ? 'text-[#E07A5F]' : 'text-[#8A8580]'}`} />
+      <div
+        className="w-9 h-9 rounded-[10px] flex items-center justify-center mb-2"
+        style={{
+          background: brandColor
+            ? undefined
+            : selected
+            ? 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)'
+            : 'linear-gradient(135deg, #F5EDE4 0%, #EBE3DA 100%)',
+        }}
+      >
+        <IconComponent className={`w-4 h-4 ${brandColor || selected ? 'text-white' : 'text-[#8A8580]'}`} />
       </div>
-      <span className={`text-xs font-medium text-center leading-tight ${selected ? 'text-[#2D2A26]' : 'text-[#8A8580]'}`}>
+      <span className={`text-[11px] font-semibold text-center leading-tight ${selected ? 'text-[#2D2A26]' : 'text-[#8A8580]'}`}>
         {source.name}
       </span>
       {selected && (
-        <Check className="w-3 h-3 text-[#E07A5F] mt-1" />
+        <Check className="w-3.5 h-3.5 text-[#E07A5F] mt-1" />
       )}
     </button>
   );
@@ -168,13 +180,16 @@ const PriorityChip = ({
   <button
     onClick={onClick}
     disabled={disabled}
-    className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
-      selected
-        ? 'bg-[#E07A5F] text-white'
-        : disabled
-          ? 'bg-[#F5EDE4] text-[#B5AFA8] cursor-not-allowed'
-          : 'bg-[#F5EDE4] text-[#2D2A26] hover:bg-[#EBE3DA]'
+    className={`px-4 py-3 rounded-[14px] text-[13px] font-semibold transition-all duration-300 ${
+      disabled ? 'cursor-not-allowed opacity-50' : 'hover:-translate-y-0.5 active:scale-[0.97]'
     }`}
+    style={{
+      background: selected
+        ? 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)'
+        : 'linear-gradient(135deg, #F5EDE4 0%, #EBE3DA 100%)',
+      color: selected ? '#FFFFFF' : disabled ? '#B5AFA8' : '#2D2A26',
+      boxShadow: selected ? '0 4px 12px rgba(224, 122, 95, 0.3)' : 'none',
+    }}
   >
     {priority.name}
   </button>
@@ -203,13 +218,24 @@ const TimelineItem = ({
     }}
   >
     <div className="flex flex-col items-center">
-      <div className="w-3 h-3 rounded-full bg-[#E07A5F]" />
-      <div className="w-0.5 flex-1 bg-[#F5EDE4] min-h-[60px]" />
+      <div
+        className="w-4 h-4 rounded-full"
+        style={{
+          background: 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)',
+          boxShadow: '0 2px 8px rgba(224, 122, 95, 0.4)',
+        }}
+      />
+      <div
+        className="w-0.5 flex-1 min-h-[60px]"
+        style={{
+          background: 'linear-gradient(180deg, #E07A5F 0%, #F5EDE4 100%)',
+        }}
+      />
     </div>
     <div className="pb-6">
-      <p className="text-xs font-semibold text-[#E07A5F] uppercase tracking-wide">{label}</p>
-      <p className="text-lg font-semibold text-[#2D2A26] mt-1">{title}</p>
-      <p className="text-sm text-[#8A8580] mt-1">{description}</p>
+      <p className="text-[11px] font-bold text-[#E07A5F] uppercase tracking-wider">{label}</p>
+      <p className="text-[17px] font-bold text-[#2D2A26] mt-1">{title}</p>
+      <p className="text-[13px] text-[#8A8580] mt-1 leading-relaxed">{description}</p>
     </div>
   </div>
 );
@@ -649,17 +675,41 @@ export default function OnboardingPage() {
       <div className="px-6 pt-8 pb-4">
         <div className="flex items-center justify-between mb-4">
           {step > 1 ? (
-            <button onClick={handleBack} className="p-2 -ml-2 text-[#8A8580] hover:text-[#2D2A26] transition-colors">
+            <button
+              onClick={handleBack}
+              className="w-10 h-10 rounded-[12px] flex items-center justify-center text-[#8A8580] hover:text-[#2D2A26] transition-all hover:bg-[#F5EDE4] active:scale-[0.95]"
+            >
               <ChevronLeft className="w-6 h-6" />
             </button>
           ) : (
             <div className="w-10" />
           )}
-          <span className="text-[#E07A5F] text-xl font-semibold">yeww</span>
+          <span
+            className="text-[22px] font-bold"
+            style={{
+              background: 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            yeww
+          </span>
           <div className="w-10" />
         </div>
         {step > 1 && (
-          <ProgressBar progress={progress} />
+          <div
+            className="h-2 rounded-full overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #F5EDE4 0%, #EBE3DA 100%)' }}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-500 ease-out"
+              style={{
+                width: `${progress}%`,
+                background: 'linear-gradient(90deg, #E07A5F 0%, #F2CC8F 100%)',
+                boxShadow: '0 0 8px rgba(224, 122, 95, 0.4)',
+              }}
+            />
+          </div>
         )}
       </div>
 
@@ -1001,13 +1051,18 @@ export default function OnboardingPage() {
                 <button
                   key={attempt.id}
                   onClick={() => setLocalPastAttempt(attempt.id)}
-                  className={`w-full p-4 rounded-2xl text-left transition-all duration-300 ${
-                    localPastAttempt === attempt.id
-                      ? 'bg-[#FFE8DC] border-2 border-[#E07A5F]'
-                      : 'bg-[#F5EDE4] border-2 border-transparent hover:bg-[#EBE3DA]'
-                  }`}
+                  className="w-full p-4 rounded-[18px] text-left transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98]"
+                  style={{
+                    background: localPastAttempt === attempt.id
+                      ? 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)'
+                      : 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+                    boxShadow: localPastAttempt === attempt.id
+                      ? '0 4px 16px rgba(224, 122, 95, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
+                      : '0 2px 8px rgba(45, 42, 38, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+                    border: localPastAttempt === attempt.id ? '2px solid #E07A5F' : '2px solid transparent',
+                  }}
                 >
-                  <p className={`font-medium ${localPastAttempt === attempt.id ? 'text-[#E07A5F]' : 'text-[#2D2A26]'}`}>
+                  <p className={`font-semibold text-[15px] ${localPastAttempt === attempt.id ? 'text-[#E07A5F]' : 'text-[#2D2A26]'}`}>
                     {attempt.label}
                   </p>
                 </button>
@@ -1034,22 +1089,32 @@ export default function OnboardingPage() {
               </Message>
             </div>
             <FadeIn visible={contentVisible} className="mt-6 flex-1">
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {BARRIERS.map((barrier) => (
                   <button
                     key={barrier.id}
                     onClick={() => toggleBarrier(barrier.id)}
-                    className={`w-full p-3 rounded-xl text-left transition-all duration-300 flex items-center justify-between ${
-                      localBarriers.includes(barrier.id)
-                        ? 'bg-[#FFE8DC] border-2 border-[#E07A5F]'
-                        : 'bg-[#F5EDE4] border-2 border-transparent hover:bg-[#EBE3DA]'
-                    }`}
+                    className="w-full p-3.5 rounded-[16px] text-left transition-all duration-300 flex items-center justify-between hover:-translate-y-0.5 active:scale-[0.98]"
+                    style={{
+                      background: localBarriers.includes(barrier.id)
+                        ? 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)'
+                        : 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+                      boxShadow: localBarriers.includes(barrier.id)
+                        ? '0 4px 16px rgba(224, 122, 95, 0.2)'
+                        : '0 2px 8px rgba(45, 42, 38, 0.06)',
+                      border: localBarriers.includes(barrier.id) ? '2px solid #E07A5F' : '2px solid transparent',
+                    }}
                   >
-                    <span className={`font-medium ${localBarriers.includes(barrier.id) ? 'text-[#E07A5F]' : 'text-[#2D2A26]'}`}>
+                    <span className={`font-semibold text-[14px] ${localBarriers.includes(barrier.id) ? 'text-[#E07A5F]' : 'text-[#2D2A26]'}`}>
                       {barrier.label}
                     </span>
                     {localBarriers.includes(barrier.id) && (
-                      <Check className="w-5 h-5 text-[#E07A5F]" />
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center"
+                        style={{ background: 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)' }}
+                      >
+                        <Check className="w-3.5 h-3.5 text-white" />
+                      </div>
                     )}
                   </button>
                 ))}
@@ -1080,16 +1145,21 @@ export default function OnboardingPage() {
                 <button
                   key={style.value}
                   onClick={() => setLocalCoachingStyle(style.value)}
-                  className={`w-full p-4 rounded-2xl text-left transition-all duration-300 ${
-                    localCoachingStyle === style.value
-                      ? 'bg-[#FFE8DC] border-2 border-[#E07A5F]'
-                      : 'bg-[#F5EDE4] border-2 border-transparent hover:bg-[#EBE3DA]'
-                  }`}
+                  className="w-full p-4 rounded-[18px] text-left transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98]"
+                  style={{
+                    background: localCoachingStyle === style.value
+                      ? 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)'
+                      : 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+                    boxShadow: localCoachingStyle === style.value
+                      ? '0 4px 16px rgba(224, 122, 95, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
+                      : '0 2px 8px rgba(45, 42, 38, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+                    border: localCoachingStyle === style.value ? '2px solid #E07A5F' : '2px solid transparent',
+                  }}
                 >
-                  <p className={`font-medium ${localCoachingStyle === style.value ? 'text-[#E07A5F]' : 'text-[#2D2A26]'}`}>
+                  <p className={`font-semibold text-[15px] ${localCoachingStyle === style.value ? 'text-[#E07A5F]' : 'text-[#2D2A26]'}`}>
                     {style.label}
                   </p>
-                  <p className="text-[#8A8580] text-sm mt-0.5">{style.desc}</p>
+                  <p className="text-[#8A8580] text-[13px] mt-1">{style.desc}</p>
                 </button>
               ))}
             </FadeIn>
@@ -1097,12 +1167,26 @@ export default function OnboardingPage() {
             {/* AI voice preview */}
             {localCoachingStyle && (
               <div className="mt-6 animate-fade-in">
-                <div className="bg-[#F5EDE4] rounded-2xl rounded-tl-sm p-4 max-w-[85%]">
-                  <p className="text-[#2D2A26]">
-                    {localCoachingStyle === 'direct' && "You've got gaps in your routine. Let's fix them."}
-                    {localCoachingStyle === 'supportive' && "You're already taking a great step by being here. Let's build on that together."}
-                    {localCoachingStyle === 'balanced' && "Good start. I'll push you when needed, support you when it counts."}
-                  </p>
+                <div className="flex gap-3">
+                  <div
+                    className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-[#E07A5F]"
+                    style={{ background: 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)' }}
+                  >
+                    y
+                  </div>
+                  <div
+                    className="rounded-[16px] rounded-tl-[6px] p-4 max-w-[85%]"
+                    style={{
+                      background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+                      boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06)',
+                    }}
+                  >
+                    <p className="text-[14px] text-[#2D2A26] leading-relaxed">
+                      {localCoachingStyle === 'direct' && "You've got gaps in your routine. Let's fix them."}
+                      {localCoachingStyle === 'supportive' && "You're already taking a great step by being here. Let's build on that together."}
+                      {localCoachingStyle === 'balanced' && "Good start. I'll push you when needed, support you when it counts."}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -1130,15 +1214,26 @@ export default function OnboardingPage() {
             <FadeIn visible={contentVisible} className="mt-6 flex-1">
               {/* Terra Connected Badge */}
               {terraConnectedDevices.length > 0 && (
-                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
-                  <Check className="w-5 h-5 text-green-600" />
-                  <span className="text-green-700 font-medium">Connected successfully!</span>
+                <div
+                  className="mb-4 p-4 rounded-[16px] flex items-center gap-3"
+                  style={{
+                    background: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
+                    boxShadow: '0 2px 8px rgba(76, 175, 80, 0.15)',
+                  }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%)' }}
+                  >
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-[#2E7D32] font-semibold text-[14px]">Connected successfully!</span>
                 </div>
               )}
 
               {/* Supported sources list */}
               <div className="mb-6">
-                <p className="text-xs text-[#B5AFA8] uppercase tracking-wide mb-3">Supported sources</p>
+                <p className="text-[11px] text-[#B5AFA8] uppercase tracking-wider font-semibold mb-3">Supported sources</p>
                 <div className="flex flex-wrap gap-2">
                   {[
                     { id: 'apple-health', name: 'Apple Health' },
@@ -1151,12 +1246,16 @@ export default function OnboardingPage() {
                   ].map((source) => (
                     <span
                       key={source.id}
-                      className="px-3 py-1.5 bg-[#F5EDE4] rounded-full text-sm text-[#8A8580]"
+                      className="px-3 py-1.5 rounded-[10px] text-[12px] font-medium text-[#8A8580]"
+                      style={{ background: 'linear-gradient(135deg, #F5EDE4 0%, #EBE3DA 100%)' }}
                     >
                       {source.name}
                     </span>
                   ))}
-                  <span className="px-3 py-1.5 bg-[#F5EDE4] rounded-full text-sm text-[#8A8580]">
+                  <span
+                    className="px-3 py-1.5 rounded-[10px] text-[12px] font-medium text-[#8A8580]"
+                    style={{ background: 'linear-gradient(135deg, #F5EDE4 0%, #EBE3DA 100%)' }}
+                  >
                     + more
                   </span>
                 </div>
@@ -1166,24 +1265,28 @@ export default function OnboardingPage() {
               <button
                 onClick={handleConnectDevice}
                 disabled={isConnectingTerra}
-                className="w-full p-4 rounded-2xl bg-[#E07A5F] text-white flex items-center justify-center gap-3 transition-all duration-300 hover:bg-[#D36B4F] active:scale-[0.98] disabled:opacity-50"
+                className="w-full p-4 rounded-[18px] text-white flex items-center justify-center gap-3 transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"
+                style={{
+                  background: 'linear-gradient(135deg, #E07A5F 0%, #D36B4F 100%)',
+                  boxShadow: '0 4px 16px rgba(224, 122, 95, 0.35)',
+                }}
               >
                 {isConnectingTerra ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="font-medium">Connecting...</span>
+                    <span className="font-semibold text-[15px]">Connecting...</span>
                   </>
                 ) : (
-                  <span className="font-medium">Connect a source</span>
+                  <span className="font-semibold text-[15px]">Connect a source</span>
                 )}
               </button>
 
-              <p className="text-center text-xs text-[#B5AFA8] mt-4">
+              <p className="text-center text-[11px] text-[#B5AFA8] mt-4">
                 Securely connect via Terra • Your data stays private
               </p>
             </FadeIn>
             <FadeIn visible={contentVisible} delay={100} className="mt-4">
-              <Button fullWidth size="lg" onClick={handleNext}>
+              <Button fullWidth size="lg" variant="secondary" onClick={handleNext}>
                 {terraConnectedDevices.length > 0 ? 'Continue' : "I'll do this later"}
               </Button>
             </FadeIn>
@@ -1405,8 +1508,22 @@ export default function OnboardingPage() {
                     transform: aiMessagesVisible >= 1 ? 'translateY(0)' : 'translateY(16px)',
                   }}
                 >
-                  <div className="bg-[#F5EDE4] rounded-2xl rounded-tl-sm p-4 max-w-[85%]">
-                    <p className="text-[#2D2A26]">Hey {userName}. I&apos;m yeww.</p>
+                  <div className="flex gap-3">
+                    <div
+                      className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-[#E07A5F]"
+                      style={{ background: 'linear-gradient(135deg, #FFE8DC 0%, #FFD4C4 100%)' }}
+                    >
+                      y
+                    </div>
+                    <div
+                      className="rounded-[16px] rounded-tl-[6px] p-4 max-w-[85%]"
+                      style={{
+                        background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+                        boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06)',
+                      }}
+                    >
+                      <p className="text-[15px] text-[#2D2A26] leading-relaxed">Hey {userName}. I&apos;m yeww.</p>
+                    </div>
                   </div>
                 </div>
 
@@ -1418,20 +1535,29 @@ export default function OnboardingPage() {
                     transform: aiMessagesVisible >= 2 ? 'translateY(0)' : 'translateY(16px)',
                   }}
                 >
-                  <div className="bg-[#F5EDE4] rounded-2xl rounded-tl-sm p-4 max-w-[85%]">
-                    <p className="text-[#2D2A26]">
-                      Based on what you&apos;ve told me, you want to{' '}
-                      {localPriorities.map((p, i) => {
-                        const priority = PRIORITIES.find(pr => pr.id === p);
-                        const name = priority?.name.toLowerCase() || p;
-                        if (i === 0) return name;
-                        if (i === localPriorities.length - 1) return ` and ${name}`;
-                        return `, ${name}`;
-                      }).join('')}.
-                      {localPastAttempt && localPastAttempt !== 'not-really' && (
-                        <> I know it hasn&apos;t stuck before. That&apos;s okay.</>
-                      )}
-                    </p>
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 flex-shrink-0" />
+                    <div
+                      className="rounded-[16px] rounded-tl-[6px] p-4 max-w-[85%]"
+                      style={{
+                        background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+                        boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06)',
+                      }}
+                    >
+                      <p className="text-[15px] text-[#2D2A26] leading-relaxed">
+                        Based on what you&apos;ve told me, you want to{' '}
+                        {localPriorities.map((p, i) => {
+                          const priority = PRIORITIES.find(pr => pr.id === p);
+                          const name = priority?.name.toLowerCase() || p;
+                          if (i === 0) return name;
+                          if (i === localPriorities.length - 1) return ` and ${name}`;
+                          return `, ${name}`;
+                        }).join('')}.
+                        {localPastAttempt && localPastAttempt !== 'not-really' && (
+                          <> I know it hasn&apos;t stuck before. That&apos;s okay.</>
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -1443,8 +1569,17 @@ export default function OnboardingPage() {
                     transform: aiMessagesVisible >= 3 ? 'translateY(0)' : 'translateY(16px)',
                   }}
                 >
-                  <div className="bg-[#F5EDE4] rounded-2xl rounded-tl-sm p-4 max-w-[85%]">
-                    <p className="text-[#2D2A26]">I don&apos;t know everything yet. But I will.</p>
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 flex-shrink-0" />
+                    <div
+                      className="rounded-[16px] rounded-tl-[6px] p-4 max-w-[85%]"
+                      style={{
+                        background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+                        boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06)',
+                      }}
+                    >
+                      <p className="text-[15px] text-[#2D2A26] leading-relaxed">I don&apos;t know everything yet. But I will.</p>
+                    </div>
                   </div>
                 </div>
 
@@ -1456,8 +1591,17 @@ export default function OnboardingPage() {
                     transform: aiMessagesVisible >= 4 ? 'translateY(0)' : 'translateY(16px)',
                   }}
                 >
-                  <div className="bg-[#F5EDE4] rounded-2xl rounded-tl-sm p-4 max-w-[85%]">
-                    <p className="text-[#2D2A26]">Ready when you are.</p>
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 flex-shrink-0" />
+                    <div
+                      className="rounded-[16px] rounded-tl-[6px] p-4 max-w-[85%]"
+                      style={{
+                        background: 'linear-gradient(135deg, #FFFFFF 0%, #FDF9F5 100%)',
+                        boxShadow: '0 2px 12px rgba(45, 42, 38, 0.06)',
+                      }}
+                    >
+                      <p className="text-[15px] text-[#2D2A26] leading-relaxed font-medium">Ready when you are.</p>
+                    </div>
                   </div>
                 </div>
               </div>
