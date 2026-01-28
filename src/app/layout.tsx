@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans } from "next/font/google";
+import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/contexts/AppContext";
 
-const dmSans = DM_Sans({
+const bricolage = Bricolage_Grotesque({
   variable: "--font-instrument",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -35,7 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${dmSans.variable} antialiased`}>
+      <body className={`${bricolage.variable} antialiased`}>
         <AppProvider>
           <div className="phone-container">
             {children}
